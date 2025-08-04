@@ -1,0 +1,30 @@
+from pathlib import Path
+from typing import Literal
+
+import duckdb
+from pydantic import Field
+
+from jute.engine.__abc import BaseSink
+
+
+class LocalCSVFile(BaseSink):
+    """Local file data source."""
+
+    type: Literal["local-csv"]
+    path: str
+    delimiter: str = "|"
+    header: bool = Field(default=True)
+    sample_records: int | None = 200
+
+    def save(self, df: duckdb.DuckDBPyRelation, *, engine, **kwargs) -> None:
+        file_format: str = Path(self.path).suffix
+
+        if file_format in (".csv",):
+            return
+
+        raise NotImplementedError(
+            f"Local file format: {file_format!r} does not support yet."
+        )
+
+    def outlet(self) -> tuple[str, str]:
+        return "csv", self.path
