@@ -34,7 +34,7 @@ class Shape(BaseModel):
         """Construct Shape model with a pair of rows and columns.
 
         Args:
-            data: tuple[int, int]
+            data: tuple[int, int]: A pair of rows and columns number.
         """
         rows, columns = data
         return cls(rows=rows, columns=columns)
@@ -108,6 +108,7 @@ class BasicFilter(BaseModel):
         return f"( {' '.join(self.get_cond())} )"
 
     def get_cond(self) -> tuple[str, str, str]:
+        """Get order of condition."""
         return (
             (self.col, self.op, self.value_expression)
             if self.value_expression

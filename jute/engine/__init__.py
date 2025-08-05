@@ -2,14 +2,15 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
+from .arrow import Arrow
 from .duckdb import DuckDB
+from .polars import Polars
 from .spark import Spark
 
 Registry = Annotated[
     Union[
-        # Pandas2,
-        # Arrow,
-        # Polars,
+        Arrow,
+        Polars,
         DuckDB,
         Spark,
     ],

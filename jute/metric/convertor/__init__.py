@@ -1,52 +1,53 @@
 import json
-from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 
 from ...models import MetricData
 
 
-def full_convert(
-    data: MetricData,
-    custom_metric: dict[str, Any],
-) -> dict[str, Any]:
-    """Covert function with Full metric data mode.
+class BaseConvertor:
 
-    Args:
-        data (MetricData): A metric data.
-        custom_metric (dict[str, Any]): A custom metric data.
-    """
-    return json.loads(data.model_dump_json(by_alias=True)) | {
-        "custom_metric": custom_metric
-    }
+    def __init__(self, data: MetricData, custom_metric: dict[str, Any]):
+        """
+        Args:
+            data (MetricData): A metric data.
+            custom_metric (dict[str, Any]): A custom metric data.
+        """
+        self.data = data
+        self.custom_metric = custom_metric
+
+    def convert(self) -> dict[str, Any]: ...
 
 
-def basic_convert(
-    data: MetricData,
-    custom_metric: dict[str, Any],
-) -> dict[str, Any]:
-    """Covert function with Basic metric data mode.
+class BasicConvertor(BaseConvertor):
 
-    Args:
-        data (MetricData): A metric data.
-        custom_metric (dict[str, Any]): A custom metric data.
-    """
-    return {
-        "run_result": data.run_result,
-        "execution_time_ms": data.execution_time_ms,
-        "engine": data.metric_engine.model_dump(by_alias=True),
-        "source": data.metric_source.model_dump(by_alias=True),
-        "transform": data.metric_transform.model_dump(by_alias=True),
-        "sink": data.metric_sink.model_dump(by_alias=True),
-        "custom_metric": custom_metric,
-    }
+    def convert(self) -> dict[str, Any]:
+        """Covert function with Basic metric data mode."""
+        return {
+            "run_result": self.data.run_result,
+            "execution_time_ms": self.data.execution_time_ms,
+            "engine": self.data.metric_engine.model_dump(by_alias=True),
+            "source": self.data.metric_source.model_dump(by_alias=True),
+            "transform": self.data.metric_transform.model_dump(by_alias=True),
+            "sink": self.data.metric_sink.model_dump(by_alias=True),
+            "custom_metric": self.custom_metric,
+        }
+
+
+class FullConvertor(BaseConvertor):
+
+    def convert(self) -> dict[str, Any]:
+        """Covert function with Full metric data mode."""
+        return json.loads(self.data.model_dump_json(by_alias=True)) | {
+            "custom_metric": self.custom_metric
+        }
 
 
 Convertor = Literal[
     "basic",
     "full",
 ]
-ConvertFunc = Callable[[MetricData, dict[str, Any]], dict[str, Any]]
-CONVERTOR_REGISTRY: dict[Convertor, ConvertFunc] = {
-    "full": full_convert,
-    "basic": basic_convert,
+ConvertType = TypeVar("ConvertType", bound=BaseConvertor)
+CONVERTOR_REGISTRY: dict[Convertor, type[ConvertType]] = {
+    "full": FullConvertor,
+    "basic": BasicConvertor,
 }

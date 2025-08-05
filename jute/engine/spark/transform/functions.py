@@ -61,7 +61,7 @@ class ColumnMap(BaseModel):
         return column, self.name
 
 
-class Expression(BaseSparkTransform):
+class Expr(BaseSparkTransform):
     """Expression Transform model."""
 
     op: Literal["expr"]
@@ -212,6 +212,7 @@ class RenameSnakeCase(BaseSparkTransform):
 
 
 class RenameCol(ColumnMap):
+    """Rename Column"""
 
     def get_rename_pair(self) -> PairCol:
         column: Column = (
@@ -554,7 +555,9 @@ class Scd2(BaseSparkTransform):
                 f"This is the first row of the wrong data -> {wrong_data[0]}",
             )
 
-        # if target['_max_update_key'] = source[update_key]: this case will happen when that rows already exist in the target because of rerunning the same job. So no need to reprocess and save it again.
+        # NOTE: if target['_max_update_key'] = source[update_key]: this case
+        #   will happen when that rows already exist in the target because of
+        #   rerunning the same job. So no need to reprocess and save it again.
         df_s_merge_filter = df_s_merge.filter(
             (df_t_id["_max_update_key"] < src_df[self.update_key])
             | (df_t_id["_max_update_key"].isNull())
@@ -673,6 +676,8 @@ class ExplodeArrayColumn(BaseSparkTransform):
 
 
 class FlattenAllExceptArray(BaseSparkTransform):
+    """Flatten all Columns except Array datatype Operator transform model."""
+
     op: Literal["flatten_all_columns_except_array"]
 
     def apply(

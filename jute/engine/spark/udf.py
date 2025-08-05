@@ -16,6 +16,11 @@ def clean_mongo_json_udf(
 ) -> Callable[[Column | str], Column]:
     """Make the clean MongDB JSON string PySpark UDF.
 
+    Args:
+        spark (SparkSession): A Spark session.
+        name (str, default None): A name for register `clean_mongo_json`
+            function to the Spark session.
+
     Example:
         >>> from pyspark.sql.functions import col
         >>> clean_json_udf = clean_mongo_json_udf()
@@ -25,15 +30,15 @@ def clean_mongo_json_udf(
     def clean_mongo_json(json_string: str) -> str:  # pragma: no cov
         """Clean MongoDB JSON string for PySpark UDF usage with SPARK-5063 support.
 
-        Converts MongoDB extended JSON format to standard JSON by handling special
-        MongoDB data types efficiently in a single optimized function.
+            Converts MongoDB extended JSON format to standard JSON by handling
+        special MongoDB data types efficiently in a single optimized function.
 
         Supported MongoDB Data Types:
-        - $oid → String (ObjectId)
-        - $date → ISO datetime string
-        - $numberLong → Integer
-        - $numberDecimal → String (preserves precision)
-        - $numberDouble → Float
+            - $oid → String (ObjectId)
+            - $date → ISO datetime string
+            - $numberLong → Integer
+            - $numberDecimal → String (preserves precision)
+            - $numberDouble → Float
 
         Args:
             json_string: MongoDB JSON string to clean

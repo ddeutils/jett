@@ -67,4 +67,6 @@ class BaseMetric(BaseModel, ABC):
             raise NotImplementedError(
                 f"Convertor type: {self.convertor!r} does not support."
             )
-        return CONVERTOR_REGISTRY[self.convertor](data, self.custom_metric)
+        return CONVERTOR_REGISTRY[self.convertor](
+            data, self.custom_metric
+        ).convert()

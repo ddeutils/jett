@@ -9,7 +9,7 @@ from .functions import (
     CleanMongoJsonStr,
     DropColumns,
     ExplodeArrayColumn,
-    Expression,
+    Expr,
     FlattenAllExceptArray,
     JsonStrToStruct,
     RenameColumns,
@@ -21,7 +21,7 @@ from .validation import ValidateColumnDisallowSpace
 Transform = Annotated[
     Union[
         GCMDecrypt,
-        Expression,
+        Expr,
         SQL,
         DropColumns,
         RenameColumns,
