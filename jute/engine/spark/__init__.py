@@ -1,7 +1,7 @@
 import logging
 import subprocess
 from collections.abc import Iterator
-from typing import Literal
+from typing import Any, Literal, TypedDict
 
 from pydantic import Field
 from pydantic.functional_validators import model_validator
@@ -21,7 +21,7 @@ from .schema_change import (
 from .sink import Sink
 from .source import Source
 from .temp_storage import TempStorage
-from .transform import ListTransform, Transform
+from .transform import Transform
 from .utils import (
     add_spark_cmd,
     clean_tz_for_extra_java_options,
@@ -34,6 +34,12 @@ from .utils import (
 )
 
 logger = logging.getLogger("jute")
+
+
+class EngineContext(TypedDict):
+    spark: SparkSession
+    engine: "Spark"
+    temp_storage: dict[str, Any]
 
 
 class Spark(BaseEngine):
@@ -61,7 +67,7 @@ class Spark(BaseEngine):
     # NOTE: Main fields
     source: Source = Field(description="A source model.")
     sink: Sink = Field(description="A sink model.")
-    transforms: ListTransform = Field(
+    transforms: list[Transform] = Field(
         default_factory=list,
         description="A list of transform model.",
     )
@@ -86,7 +92,7 @@ class Spark(BaseEngine):
         self.__validate_master_and_remote()
         return self
 
-    def session(self, context: Context) -> SparkSession:
+    def session(self, context: Context, **kwargs) -> SparkSession:
         """Create Spark Session with this model engine configuration data.
 
         Args:
@@ -98,6 +104,7 @@ class Spark(BaseEngine):
         Returns:
             SparkSession: return spark session.
         """
+        _ = kwargs
         builder = SparkSession.builder
         if self.master:
             builder = builder.master(self.master)
@@ -119,14 +126,16 @@ class Spark(BaseEngine):
 
         if self.enable_hive_support:
             builder = builder.enableHiveSupport()
+
         spark: SparkSession = builder.getOrCreate()
+
         logger.info(f"Spark Session: {spark}")
 
         if is_remote_session(spark):
             context["metric_engine"].app_id = spark.sparkContext.applicationId
         return spark
 
-    def set_engine_context(self, context: Context, **kwargs) -> DictData:
+    def set_engine_context(self, context: Context, **kwargs) -> EngineContext:
         """Create Spark Engine Context data for passing to the execute method.
 
         Args:
@@ -139,7 +148,7 @@ class Spark(BaseEngine):
             DictData: A mapping of necessary data for Spark execution.
         """
         return {
-            "spark": self.session(context),
+            "spark": self.session(context, **kwargs),
             "engine": self,
             "temp_storage": {},
         }
@@ -188,7 +197,7 @@ class Spark(BaseEngine):
         """
         if self.enable_collect_result:
             logger.warning(
-                "If you collect results from the DataFrame, it will fetch all "
+                "⚠️ If you collect results from the DataFrame, it will fetch all "
                 "records in the DataFrame. This is not ideal for any ETL "
                 "pipeline with large data sizes. Please use it only for "
                 "testing purposes or with smaller datasets."
@@ -255,9 +264,9 @@ class Spark(BaseEngine):
 
             The Spark engine apply the split sub-apply on transform operators
         to 3 layers:
-            - priority layer: An ordering transform before group transform
-            - group layer: A group transform
-            - fallback layer: A ordering transform after group transform
+            1. priority layer: An ordering transform before group transform
+            2. group layer: A group transform
+            3. fallback layer: A ordering transform after group transform
 
         Args:
             df (DataFrame): A Spark DataFrame.
@@ -271,9 +280,9 @@ class Spark(BaseEngine):
                 that was generated on that current execution.
         """
         spark: SparkSession = engine["spark"]
-        priority: ListTransform = []
-        groups: ListTransform = []
-        fallback: ListTransform = []
+        priority: list[Transform] = []
+        groups: list[Transform] = []
+        fallback: list[Transform] = []
 
         logger.debug("⚙️ Transform - Prepare transform analyzer ...")
         for t in self.transforms:
@@ -349,9 +358,13 @@ class Spark(BaseEngine):
         Args:
             pre: A pre-transform StructType object.
             post: A post-transform StructType object.
-            context:
-            spark:
-            is_group:
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+            spark (SparkSession, default None): A Spark session.
+            is_group (bool, default False): A flag that enable group logging or
+                not.
         """
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema
         post_schema = spark.createDataFrame(data=[], schema=post).schema
@@ -384,7 +397,7 @@ class SparkSubmit(Spark):
 
     type: Literal["spark-submit"]
     entrypoint: str = Field(
-        description="An entrypoint of the Spark submit command."
+        description="An entrypoint of the Spark submit command.",
     )
     archives: list[str] = Field(default_factory=list)
     py_files: list[str] = Field(default_factory=list)
@@ -473,7 +486,7 @@ class SparkSubmit(Spark):
         cmd.append(self.entrypoint)
         return cmd
 
-    def iter_submit_log(self, logs: Iterator[str]):
+    def iter_submit_log(self, logs: Iterator[str]) -> None:
         """Logging spark submit log and grep YARN application id"""
         _already_log_yarn_url: bool = False
         _states: list[str] = []
@@ -508,7 +521,10 @@ class SparkSubmit(Spark):
         """Submit Spark application to YARN.
 
         Args:
-            context: DictData
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
         """
         submit_cmd: list[str] = self.get_cmd()
         logger.info(f"Spark Submit Command:\n{submit_cmd}")

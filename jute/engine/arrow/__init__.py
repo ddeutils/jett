@@ -1,12 +1,13 @@
 from typing import Any, Literal
 
-from __types import DictData
-from models import Context, Result
-
+from ...__types import DictData
+from ...models import Context, Result
 from ..__abc import BaseEngine
 
 
 class Arrow(BaseEngine):
+    """Arrow Engine model."""
+
     type: Literal["arrow"]
 
     def execute(
@@ -25,4 +26,8 @@ class Arrow(BaseEngine):
 
     def set_result(self, df: Any, context: Context) -> Result: ...
 
-    def set_engine_context(self, context: Context, **kwargs) -> DictData: ...
+    def set_engine_context(self, context: Context, **kwargs) -> DictData:
+        """Set itself to engine context data."""
+        return {
+            "engine": self,
+        }

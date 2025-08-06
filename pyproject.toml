@@ -18,11 +18,11 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 spark = [
+    "pyarrow==21.0.0",
     "pyspark[connect]==3.4.1",
 ]
-duckdb = [
-    "duckdb",
-]
+duckdb = [ "duckdb==1.3.2" ]
+polars = [ "polars==1.32.0" ]
 dev = [
     "clishelf>=0.2.22",
     "pre-commit>=4.0.0",

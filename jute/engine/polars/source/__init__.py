@@ -2,18 +2,17 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
-from .console import Console
-from .files.local import LocalCSVFile
+from .files.local import LocalCSVFile, LocalJsonFile
 
 LocalFile = Annotated[
-    Union[LocalCSVFile,],
+    Union[
+        LocalCSVFile,
+        LocalJsonFile,
+    ],
     Field(discriminator="file_format"),
 ]
 
-Sink = Annotated[
-    Union[
-        LocalFile,
-        Console,
-    ],
+Source = Annotated[
+    Union[LocalFile,],
     Field(discriminator="type"),
 ]

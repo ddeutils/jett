@@ -17,6 +17,9 @@ uv pip install -U jute
 | Java    | `openjdk@11` | `openjdk@17` |
 | Pyspark |   `3.4.1`    |  `>=4.0.0`   |
 | Scala   |  `2.12.17`   |  `2.12.17`   |
+| DuckDB  |   `1.3.2`    |              |
+| Polars  |   `1.32.0`   |              |
+| Arrow   |   `21.0.0`   |              |
 
 | Name    | Status | Description                             |
 |---------|:------:|-----------------------------------------|
@@ -31,9 +34,12 @@ For example file, `etl.spark.jude`:
 
 ```yaml
 type: spark
+name: Load CSV to GGSheet
+app_name: load_csv_to_ggsheet
 source:
   type: local
   file_format: csv
+  path: ./assets/data/customer.csv
 transform:
   - op: rename_to_snakecase
   - op: group
@@ -43,6 +49,7 @@ transform:
 sink:
   type: local
   file_type: google_sheet
+  path: ./assets/landing/customer.gsheet
 metric:
   - type: console
     convertor: basic

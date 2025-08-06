@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import Literal
 
-import duckdb
+from polars import DataFrame
 from pydantic import Field
 
-from ....__abc import BaseSink
+from jute.engine.__abc import BaseSink
 
 
 class LocalCSVFile(BaseSink):
@@ -17,11 +17,13 @@ class LocalCSVFile(BaseSink):
     header: bool = Field(default=True)
     sample_records: int | None = 200
 
-    def save(self, df: duckdb.DuckDBPyRelation, *, engine, **kwargs) -> None:
+    def save(self, df: DataFrame, *, engine, **kwargs) -> None:
         file_format: str = Path(self.path).suffix
 
         if file_format in (".csv",):
             return
+
+        # df.write_csv(self.path, separator=self.delimiter)
 
         raise NotImplementedError(
             f"Local file format: {file_format!r} does not support yet."

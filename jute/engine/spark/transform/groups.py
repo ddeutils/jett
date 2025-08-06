@@ -55,6 +55,7 @@ class Group(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> AnyApplyOutput:
+        """Apply group transform."""
         maps: dict[str, Column] = {}
         for g in self.transform:
             output: PairCol | list[PairCol] = g.apply(

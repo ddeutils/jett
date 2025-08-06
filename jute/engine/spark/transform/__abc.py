@@ -21,6 +21,9 @@ logger = logging.getLogger("jute")
 def is_pair_col(value: PairCol | Any) -> bool:
     """Change value is a pair of Column and string.
 
+    Args:
+        value (PairCol | Any): A pair of Column and its name or any value.
+
     Returns:
         bool: Return True if an input value is a pair of Column and alias.
     """
@@ -33,9 +36,14 @@ def is_pair_col(value: PairCol | Any) -> bool:
 
 
 class BaseSparkTransform(BaseTransform, ABC):
-    """Base DuckDB Transform abstract model."""
+    """Base Spark Transform abstract model."""
 
-    priority: Literal["pre", "group", "post"] = "pre"
+    priority: Literal["pre", "group", "post"] = Field(
+        default="pre",
+        description=(
+            "A priority value for order transform operator before apply."
+        ),
+    )
     cache: bool = Field(
         default=False,
         description="Use `.cache` method to applied Spark DataFrame if it set.",
@@ -106,7 +114,7 @@ class BaseSparkTransform(BaseTransform, ABC):
                 )
             if self.cache:
                 logger.warning(
-                    f"⚠️🏭 Cache the DataFrame after apply operator: {self.op!r}"
+                    f"🏭 Cache the DataFrame after apply operator: {self.op!r}"
                 )
                 df.cache()
             return rs
