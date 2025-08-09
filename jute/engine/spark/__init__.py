@@ -43,7 +43,9 @@ class EngineContext(TypedDict):
 
 
 class Spark(BaseEngine):
-    """Spark Engine model."""
+    """Spark Engine model. This engine will execute Pyspark via connect on the
+    current context.
+    """
 
     type: Literal["spark"]
     app_name: str | None = None
@@ -487,7 +489,11 @@ class SparkSubmit(Spark):
         return cmd
 
     def iter_submit_log(self, logs: Iterator[str]) -> None:
-        """Logging spark submit log and grep YARN application id"""
+        """Logging spark submit log and grep YARN application ID.
+
+        Args:
+            logs (Iterator[str]): A yield of log statement.
+        """
         _already_log_yarn_url: bool = False
         _states: list[str] = []
         for log in logs:
@@ -517,7 +523,7 @@ class SparkSubmit(Spark):
                     logger.info(f"YARN app tracking url: {_yarn_url}")
                     _already_log_yarn_url = True
 
-    def submit(self, context: DictData) -> None:
+    def submit(self, context: Context) -> None:
         """Submit Spark application to YARN.
 
         Args:
@@ -557,7 +563,7 @@ class SparkSubmit(Spark):
     def apply(
         self,
         df: DataFrame,
-        context: DictData,
+        context: Context,
         *,
         engine: DictData,
         **kwargs,
@@ -566,7 +572,7 @@ class SparkSubmit(Spark):
             "Spark Submit Engine does not support apply transform."
         )
 
-    def execute(self, context: DictData, *, engine: DictData) -> DataFrame:
+    def execute(self, context: Context, *, engine: DictData) -> DataFrame:
         logger.info("Start execute with Spark Submit engine.")
         raise NotImplementedError(
             "Spark Submit Engine does not support direct execute yet."

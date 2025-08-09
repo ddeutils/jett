@@ -23,7 +23,8 @@ def extract_struct_type(
     Args:
         source_struct: PySpark's schema of source DataFrame
         table_struct: PySpark's schema of table DataFrame
-        parent_cols: List of parent columns of each nested fields
+        parent_cols (list[str], default None): A list of parent columns of each
+            nested fields
 
     Returns:
         list[Changed]

@@ -9,7 +9,7 @@ from pyspark.sql.connect.session import DataFrame as DataFrameRemote
 
 from ....__types import DictData
 from ....errors import JuteTransformError
-from ....models import MetricOperator, MetricTransformOrder
+from ....models import Context, MetricOperator, MetricTransformOrder
 from ...__abc import BaseTransform
 from ..__types import AnyDataFrame, PairCol
 
@@ -25,7 +25,7 @@ def is_pair_col(value: PairCol | Any) -> bool:
         value (PairCol | Any): A pair of Column and its name or any value.
 
     Returns:
-        bool: Return True if an input value is a pair of Column and alias.
+        bool: True if an input value is a pair of Column and alias.
     """
     return (
         isinstance(value, tuple)
@@ -67,6 +67,12 @@ class BaseSparkTransform(BaseTransform, ABC):
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            AnyApplyOutput: An any applied output that can be
+                - A pair of Column and alias name.
+                - A list of pair Column.
+                - A DataFrame object.
         """
 
     def apply_group(
@@ -87,7 +93,7 @@ class BaseSparkTransform(BaseTransform, ABC):
     def handle_apply_group(
         self,
         df: DataFrame,
-        context: DictData,
+        context: Context,
         engine: DictData,
         *,
         spark: SparkSession | None = None,
@@ -124,7 +130,7 @@ class BaseSparkTransform(BaseTransform, ABC):
     def handle_apply(
         self,
         df: AnyDataFrame,
-        context: DictData,
+        context: Context,
         engine: DictData,
         spark: SparkSession | None = None,
         **kwargs,

@@ -83,9 +83,12 @@ class Expr(BaseSparkTransform):
         """Apply priority transform to expression the query.
 
         Args:
-            df (DataFrame): A Spark DataFrame instance.
-            spark (SparkSession): A Spark session.
-            engine (DictData): An engine context data.
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
         """
         return expr(self.query), self.name
 
@@ -104,6 +107,19 @@ class SQL(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
+        """Apply SQL.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            DataFrame:
+        """
         temp_table_name: str = f"temp_table_{get_random_str_unique()}"
         query = replace_all_occurrences(
             self.query, "temp_table", temp_table_name
@@ -126,44 +142,50 @@ class RenameSnakeCase(BaseSparkTransform):
     ) -> DataFrame:
         """Apply to Rename all columns (support nested columns) to snake case format.
         by default the schema and data when reading from source is already ordered.
-        [caution] this transform can result in wrong data when the order of
-            nested column is not an alphabetical order. the order of 1st lv column can be unordered.
-        [hint] the columns can be ordered by using the logic df.select(sorted(df.columns)).
-        ------
+
+        Warnings:
+
+            this transform can result in wrong data when the order of nested
+        column is not an alphabetical order. the order of 1st lv column can be
+        unordered.
+
+        Notes:
+            the columns can be ordered by using the logic.
+            >>> df.select(sorted(df.columns))
+
         Examples:
             Case of unordered nested columns
-
-            input_schema = StructType([
-                StructField("parent_struct", StructType([
-                    StructField("FIRST_KEY", BooleanType(), True),
-                    StructField("SECOND_KEY", BooleanType(), True),
-                    ]),
-                    True
-                )
-            ])
-            input_data = [{
-                "parent_struct": {
-                    "SECOND_KEY": False,
-                    "FIRST_KEY": True
-                }
-            }]
+            >>> from pyspark.sql.types import StructType, StructField, BooleanType
+            >>> input_schema = StructType([
+            ...     StructField("parent_struct", StructType([
+            ...         StructField("FIRST_KEY", BooleanType(), True),
+            ...         StructField("SECOND_KEY", BooleanType(), True),
+            ...         ]),
+            ...         True
+            ...     )
+            ... ])
+            >>> input_data = [{
+            ...     "parent_struct": {
+            ...         "SECOND_KEY": False,
+            ...         "FIRST_KEY": True
+            ...     }
+            ... }]
 
             Output after renaming columns will be:
-
-            new_schema = StructType([
-                StructField("parent_struct", StructType([
-                    StructField("first_key", BooleanType(), True),
-                    StructField("second_key", BooleanType(), True),
-                    ]),
-                    True
-                )
-            ])
-            new_data = [{
-                "parent_struct": {
-                    "first_key": False,
-                    "second_key": True
-                }
-            }]
+            >>> new_schema = StructType([
+            ...     StructField("parent_struct", StructType([
+            ...         StructField("first_key", BooleanType(), True),
+            ...         StructField("second_key", BooleanType(), True),
+            ...         ]),
+            ...         True
+            ...     )
+            ... ])
+            >>> new_data = [{
+            ...     "parent_struct": {
+            ...         "first_key": False,
+            ...         "second_key": True
+            ...     }
+            ... }]
         """
         non_snake_case_cols = extract_col_with_pattern(
             schema=df.schema, patterns=["non_snake_case"]
@@ -271,7 +293,16 @@ class RenameColumns(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> list[PairCol]:
-        """Apply to Rename Column transform."""
+        """Apply to Rename Column transform.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+        """
         map_cols: list[PairCol] = []
         for c in self.columns:
             if self.allow_fill_null_when_col_not_exist:
@@ -305,6 +336,19 @@ class SelectColumns(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
+        """Apply select column.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            DataFrame:
+        """
         current_cols = df.columns
         target_cols = self.columns
         if self.allow_missing_columns:
@@ -325,6 +369,19 @@ class DropColumns(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
+        """Apply drop column.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+
+        """
         current_cols = df.columns
         target_cols = self.columns
         if self.allow_missing_columns:
@@ -345,7 +402,16 @@ class CleanMongoJsonStr(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> PairCol:
-        """Apply to Clean Mongo Json string."""
+        """Apply to Clean Mongo Json string.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+        """
         from ..udf import clean_mongo_json_udf
 
         func_name: str = "cleanMongoJsonString"
@@ -384,7 +450,16 @@ class JsonStrToStruct(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> AnyApplyOutput:
-        """Apply convert JSON string column into new pyspark dataframe."""
+        """Apply convert JSON string column into new pyspark dataframe.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+        """
         if is_remote_session(spark):
             temp_dir: str = self.override_tmp_dir()
             logger.info(
@@ -428,6 +503,8 @@ class JsonStrToStruct(BaseSparkTransform):
 
 
 class Scd2(BaseSparkTransform):
+    """SCD Type 2 Transform operator model."""
+
     op: Literal["scd2"]
     merge_key: list[str]
     update_key: str
@@ -456,19 +533,24 @@ class Scd2(BaseSparkTransform):
 
         Notes:
             A method to prepare scd type 2 data. It has 4 steps:.
-                1: get df_target from data warehouse (if exists)
-                2: add `_scd2_start_time` and `_scd_end_time` column to df_source
+                1: Get df_target from data warehouse (if exists)
+                2: Add `_scd2_start_time` and `_scd_end_time` column to df_source
                     - `_scd2_start_time`:
-                        - if id of the row already exist in target table, _scd2_start_time will be update_key for that row
-                        - if id of the row doesn't exist in target table (new record), _scd2_start_time will be create_key for that row
+                        - if id of the row already exist in target table,
+                          _scd2_start_time will be update_key for that row
+                        - if id of the row doesn't exist in target table (new record),
+                          _scd2_start_time will be create_key for that row
                     - `_scd2_end_time`: Defaults to NULL
-                3: update df_target._scd_end_time from null to df_source._scd2_start_time in some rows
-                4: combine 2 df from step 2 and 3 together and send it to sink process
+                3: Update df_target._scd_end_time from null to df_source._scd2_start_time in some rows
+                4: Combine 2 df from step 2 and 3 together and send it to sink process
 
         Args:
-            df: source dataframe (incoming data)
-            engine:
-            spark:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
 
         Returns:
             Dataframe: the final dataframe that ready to write to the table
@@ -487,7 +569,7 @@ class Scd2(BaseSparkTransform):
             )
         else:
             logger.info(
-                "no db_name and table_name provided. so no need to connect to "
+                "No `db_name` and `table_name` provided. so no need to connect to "
                 "target table and just add the _scd2_start_time and "
                 "_scd2_end_time to source df"
             )
@@ -569,7 +651,7 @@ class Scd2(BaseSparkTransform):
                 "So you will get an empty dataframe result"
             )
 
-        # create scd2_start_col by checking join result
+        # NOTE: create scd2_start_col by checking join result
         check_merge_not_null = [
             df_t_id[key].isNotNull() for key in self.merge_key
         ]
@@ -592,7 +674,7 @@ class Scd2(BaseSparkTransform):
         tgt_df: DataFrame,
         src_df: DataFrame,
     ) -> DataFrame:
-        """Update df_target._scd_end_time from null to df_source._scd2_start_time."""
+        """Update tgt_df._scd_end_time from null to src_df._scd2_start_time."""
         merge_condition = [
             tgt_df[key] == src_df[key] for key in self.merge_key
         ] + [tgt_df[self.update_key] < src_df[self.update_key]]
@@ -631,7 +713,16 @@ class ExplodeArrayColumn(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> AnyApplyOutput:
-        """Apply to Explode Array Column"""
+        """Apply to Explode Array Column.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+        """
         position_col_name = f"{self.position_prefix_name}_{self.explode_col}"
         col_type_obj = df.schema[self.explode_col].dataType
         if col_type_obj.typeName() not in ("array",):
@@ -688,6 +779,18 @@ class FlattenAllExceptArray(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
+        """
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            DataFrame:
+        """
         transform_dict: dict[str, Column] = {}
         for c in extract_columns_without_array(schema=df.schema):
             flatten_col = "_".join(c.split("."))

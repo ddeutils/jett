@@ -286,8 +286,11 @@ class SparkSubmitOperator(Operator):
         py_filepath = f"{temp_path}/{self.python_filename}"
         logger.info(f"pyspark entrypoint file path: {py_filepath}")
 
-        # for spark-submit YARN cluster mode, file will be place in working directory
-        # for local mode, it uses the temporary path created by Python Temporary directory
+        # NOTE:
+        #   - for spark-submit YARN cluster mode, file will be place in working
+        #     directory
+        #   - for local mode, it uses the temporary path created by Python
+        #     Temporary directory
         config_filepath = self.yaml_filename
         if self.c.data.get("master", "").startswith("local"):
             config_filepath: str = py_filepath
@@ -304,12 +307,18 @@ class SparkSubmitOperator(Operator):
         *,
         allow_raise: bool = False,
     ) -> Result:
-        """Prepare spark-submit command before run."""
+        """Prepare spark-submit command before run.
+
+        Args:
+            allow_raise: bool
+                If set be True, it will raise the error when execution was
+                failed.
+        """
         from .engine.spark import SparkSubmit
 
         ts: float = time.monotonic()
         start_date: datetime = get_dt_now()
-        context: DictData = {
+        context: Context = {
             "author": self.c.model.author,
             "owner": self.c.model.owner,
             "parent_dir": self.c.model.parent_dir,

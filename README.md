@@ -21,12 +21,12 @@ uv pip install -U jute
 | Polars  |   `1.32.0`   |              |
 | Arrow   |   `21.0.0`   |              |
 
-| Name    | Status | Description                             |
-|---------|:------:|-----------------------------------------|
-| Pyspark |   ✅    | ETL with Pyspark and Spark submit CLI.  |
-| DuckDB  |   ✅    |                                         |
-| Arrow   |   ❌    |                                         |
-| Polars  |   ❌    |                                         |
+| Name    | Status | Description                   |
+|---------|:------:|-------------------------------|
+| Pyspark |   ✅    | Pyspark and Spark submit CLI. |
+| DuckDB  |   ✅    | DuckDB and Spark API DuckDB   |
+| Arrow   |   ❌    |                               |
+| Polars  |   ❌    |                               |
 
 ## Usage
 

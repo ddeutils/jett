@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from typing import Any
 
 from pyspark.sql import SparkSession
 
@@ -9,7 +10,7 @@ from .utils import is_remote_session
 logger = logging.getLogger("jute")
 
 
-def _extract_table_names_from_spark_plan(items):
+def extract_table_names_from_spark_plan(items: Any) -> list[str]:
     """A recursive function for getting table names from a spark plan dictionary.
 
         For CTE and table names, it will be in the element that has
@@ -35,10 +36,10 @@ def _extract_table_names_from_spark_plan(items):
                 tables.append(table_name)
         for value in items.values():
             if isinstance(value, (dict, list)):
-                tables.extend(_extract_table_names_from_spark_plan(value))
+                tables.extend(extract_table_names_from_spark_plan(value))
     elif isinstance(items, list):
         for item in items:
-            tables.extend(_extract_table_names_from_spark_plan(item))
+            tables.extend(extract_table_names_from_spark_plan(item))
     return tables
 
 
@@ -46,25 +47,26 @@ def extract_table_names_from_query(query: str) -> list[str]:
     """A function that return the inlets table name from SparkSQL query string.
 
     Args:
-        query: SparkSQL query string
+        query (str): SparkSQL query string.
 
     Returns:
         list[str]: list of inlets table names
     """
-    # NOTE: Got None for now, So I will use getOrCreate first
+    # NOTE: Got None for now, So I will use `getOrCreate` first
+    # ---
     # spark = SparkSession.getActiveSession()
     spark = SparkSession.builder.appName("sql_parser").getOrCreate()
 
     if is_remote_session(spark):
         logger.warning(
-            "`extract_table_names_from_query` is not support for "
+            "This `extract_table_names_from_query` func is not support for "
             "SparkConnectSession yet"
         )
         return []
 
-    # if SparkSession, use Spark Plan to get the table names from query
+    # NOTE: if SparkSession, use Spark Plan to get the table names from query.
     plan = spark._jsparkSession.sessionState().sqlParser().parsePlan(query)
-    plan_items: dict | list = json.loads(plan.toJSON())
+    plan_items: dict[str, Any] | list[Any] = json.loads(plan.toJSON())
     plan_string = plan.toString()
     cte_match = re.match(r"CTE \[(.*?)]", plan_string)
     if cte_match:
@@ -73,9 +75,9 @@ def extract_table_names_from_query(query: str) -> list[str]:
         cte_list = []
 
     # NOTE: get table names from spark plan
-    result_tables = _extract_table_names_from_spark_plan(plan_items)
+    result_tables: list[str] = extract_table_names_from_spark_plan(plan_items)
 
-    # NOTE: exclude cte from result_tables
+    # NOTE: Exclude the CTE alias from extraction result.
     inlet_tables = list(set(result_tables) - set(cte_list))
     inlet_tables.sort()
     return inlet_tables

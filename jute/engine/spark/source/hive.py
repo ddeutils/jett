@@ -13,7 +13,7 @@ logger = logging.getLogger("jute")
 
 
 class Hive(BaseSource):
-    """JDBC Spark Source model."""
+    """Hive Spark Source model."""
 
     type: Literal["hive", "iceberg"]
     database: str | None = None
@@ -32,11 +32,13 @@ class Hive(BaseSource):
         if self.query:
             if self.database or self.table_name:
                 raise ValueError(
-                    "Cannot provide `query` and `db_name`/`table_name` at the same time."
+                    "Cannot provide `query` and `db_name`/`table_name` at the "
+                    "same time."
                 )
         elif not self.database or not self.table_name:
             raise ValueError(
-                "If `query` is not provided, both `db_name` and `table_name` must be specified."
+                "If `query` is not provided, both `db_name` and `table_name` "
+                "must be specified."
             )
 
         return self
