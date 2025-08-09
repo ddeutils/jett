@@ -28,7 +28,7 @@ uv pip install -U jute
 | Arrow   |   ❌    |                               |
 | Polars  |   ❌    |                               |
 
-## Usage
+## 📝 Usage
 
 For example file, `etl.spark.jude`:
 
@@ -36,20 +36,25 @@ For example file, `etl.spark.jude`:
 type: spark
 name: Load CSV to GGSheet
 app_name: load_csv_to_ggsheet
+master: local
+# 1) Load data from source
 source:
   type: local
   file_format: csv
   path: ./assets/data/customer.csv
+# 2) Transform this data.
 transform:
   - op: rename_to_snakecase
   - op: group
     transform:
       - op: expr
         value: "CAST(id AS string)"
+# 3) Sink result to target
 sink:
   type: local
   file_type: google_sheet
   path: ./assets/landing/customer.gsheet
+# 4) Metric that will send after execution.
 metric:
   - type: console
     convertor: basic
@@ -59,7 +64,7 @@ metric:
     port: 1234
 ```
 
-## Document
+## 📖 Document
 
 This project will reference emoji from the [Pipeline Emojis](https://emojidb.org/pipeline-emojis).
 
