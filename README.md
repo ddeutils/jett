@@ -1,12 +1,13 @@
-# JUTE (Just a Utility Template Engines)
+# DeTool (Just a Tool for Template Engines)
 
-Just a Utility Template Engines. This project provide the ETL template for
-implemented DataFrame engine like `PySpark`, `Duckdb`, `Polars`, etc.
+Just a Tool Template Engines that easy to use for Data Engineer.
+This project provide the ETL template for implemented DataFrame engine like
+`PySpark`, `Duckdb`, `Polars`, etc.
 
 ## 📦 Installation
 
 ```shell
-uv pip install -U jute
+uv pip install -U detool
 ```
 
 | Package |   Version    | Next Support |
@@ -72,5 +73,5 @@ This project will reference emoji from the [Pipeline Emojis](https://emojidb.org
 
 I do not think this project will go around the world because it has specific propose,
 and you can create by your coding without this project dependency for long term
-solution. So, on this time, you can open [the GitHub issue on this project 🙌](https://github.com/ddeutils/jude/issues)
+solution. So, on this time, you can open [the GitHub issue on this project 🙌](https://github.com/ddeutils/detool/issues)
 for fix bug or request new feature if you want it.

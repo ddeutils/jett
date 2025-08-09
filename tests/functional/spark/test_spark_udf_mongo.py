@@ -30,7 +30,7 @@ def spark() -> Iterator[SparkSession]:
 @pytest.fixture(scope="module", autouse=True)
 def register_udf(spark: SparkSession):
     """Register the MongoDB JSON cleaner as a UDF."""
-    from jute.engine.spark.udf import clean_mongo_json_udf
+    from detool.engine.spark.udf import clean_mongo_json_udf
 
     return clean_mongo_json_udf(spark=spark)
 

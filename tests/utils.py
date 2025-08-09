@@ -7,7 +7,7 @@ from urllib.request import urlretrieve
 
 from pyspark.sql import SparkSession
 
-logger = logging.getLogger("jute")
+logger = logging.getLogger("detool")
 
 SPARK_DISABLE: bool = not bool(int(os.getenv("JUTE__TEST__SPARK_ENABLE", "0")))
 

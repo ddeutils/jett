@@ -4,7 +4,7 @@ import pytest
 
 from ...utils import SPARK_DISABLE
 
-logger = logging.getLogger("jute")
+logger = logging.getLogger("detool")
 
 
 @pytest.fixture(scope="package", autouse=True)

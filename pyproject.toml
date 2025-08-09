@@ -3,8 +3,8 @@ requires = [ "hatchling>=1.8.0" ]
 build-backend = "hatchling.build"
 
 [project]
-name = "jute"
-description = "just a utility for template engines"
+name = "detool"
+description = "just a tools for template engines"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -31,12 +31,12 @@ dev = [
 ]
 
 [project.scripts]
-jute = "jute.__main__:cli"
+detool = "detool.__main__:cli"
 
 [tool.hatch.version]
 scheme = "standard"
 source = "code"
-path = "jute/__about__.py"
+path = "detool/__about__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -47,10 +47,10 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = [ "jute" ]
+packages = [ "detool" ]
 
 [tool.shelf.version]
-version = "./jute/__about__.py"
+version = "./detool/__about__.py"
 changelog = "./docs/changelog.md"
 commit_subject_format = "{emoji} {subject}"
 commit_msg_format = "- {subject}"
@@ -62,10 +62,10 @@ commit_prefix_force_fix = true
 branch = true
 relative_files = true
 concurrency = [ "thread", "multiprocessing" ]
-source = [ "jute" ]
+source = [ "detool" ]
 omit = [
-    "jute/__about__.py",
-    "jute/__init__.py",
+    "detool/__about__.py",
+    "detool/__init__.py",
 ]
 
 [tool.coverage.report]
@@ -75,7 +75,7 @@ exclude_lines = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = [ "jute" ]
+pythonpath = [ "detool" ]
 console_output_style = "count"
 addopts = [
     "--strict-config",
@@ -113,8 +113,8 @@ exclude = """
 """
 
 [project.urls]
-Homepage = "https://github.com/ddeutils/jute/"
-"Source Code" = "https://github.com/ddeutils/jute/"
+Homepage = "https://github.com/ddeutils/detool/"
+"Source Code" = "https://github.com/ddeutils/detool/"
 
 [tool.ruff]
 line-length = 80

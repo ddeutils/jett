@@ -5,8 +5,8 @@ from textwrap import dedent
 
 import pytest
 
-from jute.conf import substitute_env_vars
-from jute.utils import load_yaml
+from detool.conf import substitute_env_vars
+from detool.utils import load_yaml
 
 
 @pytest.fixture(scope="function")

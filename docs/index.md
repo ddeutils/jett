@@ -1,1 +1,1 @@
-# JUTE (Just a Utility Template Engines)
+# DeTool (Just a Tool for Template Engines)
