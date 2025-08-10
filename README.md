@@ -31,7 +31,8 @@ uv pip install -U detool
 
 ## 📝 Usage
 
-For example file, `etl.spark.jude`:
+For example file, `etl.spark.tool` (I use `.tool` extension for validate it with
+JSON schema by pattern `*.tool`):
 
 ```yaml
 type: spark

@@ -2,15 +2,15 @@ class BaseError(Exception):
     """Base Tool Exception class."""
 
 
-class ToolCoreError(BaseError):
+class ToolError(BaseError):
     """Main Tool Exception class."""
 
 
-class ToolValidationError(ToolCoreError):
+class ToolValidationError(ToolError):
     """A Custom Exception raised when validation failed."""
 
 
-class ToolTransformError(ToolCoreError):
+class ToolTransformError(ToolError):
     """A Custom Exception raised when transform failed."""
 
 

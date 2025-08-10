@@ -78,12 +78,12 @@ def validate_conf(file: Path):
     """Validate YAPT config file."""
     try:
         tool = ToolModel.from_yaml(path=file)
-        echo(st_bold_green(f"Tool config ({file}) is valid !!"))
+        echo(st_bold_green(f"✅ Tool config ({file}) is valid !!"))
         echo(f"> Name: {tool.model.name}")
         echo(f"> Author: {tool.model.author or 'Anon'}")
         echo(f"> Engine Type: {tool.model.type}")
     except Exception as e:
-        echo(st_bold_red(f"Tool config ({file}) is invalid !!"))
+        echo(st_bold_red(f"❌ Tool config ({file}) is invalid !!"))
         raise e
 
 
