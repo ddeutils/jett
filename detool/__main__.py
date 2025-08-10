@@ -6,8 +6,8 @@ import click
 from pydantic import TypeAdapter
 
 from .__about__ import __version__
-from .engine import Registry
-from .operator import ToolModel
+from .engine import Engine
+from .tools import ToolModel
 
 st_bold = partial(click.style, bold=True)
 st_bold_red = partial(click.style, bold=True, fg="red")
@@ -44,7 +44,7 @@ def gen_json_schema(output_file: Path | None = None) -> None:  # pragma: no cov
         output_file (Path, default None): An output filepath that want to use
             for writing JSON Schema data after generated.
     """
-    json_schema = TypeAdapter(Registry).json_schema(by_alias=True)
+    json_schema = TypeAdapter(Engine).json_schema(by_alias=True)
     template_schema: dict[str, str] = {
         "$schema": "http://json-schema.org/draft/2020-12/schema",
         "$id": "https://example.com/yapt.schema.json",

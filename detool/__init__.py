@@ -1,1 +1,1 @@
-from .operator import Operator, SparkSubmitOperator
+from .tools import SparkSubmitTool, Tool

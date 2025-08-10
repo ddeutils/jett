@@ -1,16 +1,16 @@
 from pathlib import Path
 
 from detool.engine.__abc import Result
-from detool.operator import Operator
+from detool.tools import Tool
 
 
 def test_duckdb_csv_to_console(root_path: Path):
-    op = Operator(path=root_path / "assets/example.duckdb.csv.tool")
+    op = Tool(path=root_path / "assets/example.duckdb.csv.tool")
     rs: Result = op.execute(allow_raise=True)
     print(rs.columns)
 
 
 def test_duckdb_json_to_console(root_path: Path):
-    op = Operator(path=root_path / "assets/example.duckdb.json.tool")
+    op = Tool(path=root_path / "assets/example.duckdb.json.tool")
     rs: Result = op.execute(allow_raise=True)
     print(rs.columns)

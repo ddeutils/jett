@@ -7,7 +7,7 @@ from .duckdb import DuckDB
 from .polars import Polars
 from .spark import Spark
 
-Registry = Annotated[
+Engine = Annotated[
     Union[
         Arrow,
         Polars,

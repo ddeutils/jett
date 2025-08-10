@@ -14,8 +14,8 @@ from typing_extensions import Self
 from .__about__ import __version__
 from .__types import DictData, StrOrPath
 from .conf import substitute_env_vars
-from .engine import Registry
-from .errors import ToolCoreError, ToolValidationError
+from .engine import Engine
+from .errors import ToolError, ToolValidationError
 from .models import Context, Result
 from .utils import get_dt_now, load_yaml, write_yaml
 
@@ -27,7 +27,7 @@ class ToolModel(BaseModel):
     config data.
     """
 
-    model: Registry = Field(
+    model: Engine = Field(
         description="A Tool model that already create on the registry module.",
     )
     data: DictData = Field(
@@ -93,7 +93,7 @@ class ToolModel(BaseModel):
             Self: The new ToolModel instance with the current config data.
         """
         try:
-            self.__dict__["model"] = TypeAdapter(Registry).validate_python(
+            self.__dict__["model"] = TypeAdapter(Engine).validate_python(
                 override or self.data
             )
         except ValidationError as e:
@@ -101,8 +101,8 @@ class ToolModel(BaseModel):
             raise ToolValidationError(e) from e
 
 
-class Operator:
-    """Tool Operator object is tha main Python interface object for this
+class Tool:
+    """Tool object is tha main Python interface object for this
     package.
 
     Attributes:
@@ -132,17 +132,15 @@ class Operator:
             config:
 
         Raises:
-            ToolCoreError: If path and config parameters was pass together.
-            ToolCoreError: If path and config be None value together.
+            ToolError: If path and config parameters was pass together.
+            ToolError: If path and config be None value together.
         """
 
         # NOTE: Validate parameter with rule that should not supply both of its.
         if path and config:
-            raise ToolCoreError("Please pass only one for `path` nor `config`.")
+            raise ToolError("Please pass only one for `path` nor `config`.")
         elif not path and not config:
-            raise ToolCoreError(
-                "Both of `path` and `config` must not be empty."
-            )
+            raise ToolError("Both of `path` and `config` must not be empty.")
 
         self._path: StrOrPath | None = path
         self._config: DictData | None = config
@@ -153,7 +151,7 @@ class Operator:
 
     def __str__(self) -> str:
         """Override the `__str__` dunder method."""
-        return f"Tool Operator Engine: {self.c.model.type}"
+        return f"Tool Engine: {self.c.model.type}"
 
     def post_init(self) -> None:
         """Post initialize method."""
@@ -245,15 +243,15 @@ class Operator:
         """Generate UI for this valid Tool configuration data."""
 
 
-class SparkSubmitOperator(Operator):
-    """Tool Spark Submit Operator."""
+class SparkSubmitTool(Tool):
+    """Spark Submit Tool."""
 
     yaml_filename: ClassVar[str] = "tool_conf.yml"
     python_filename: ClassVar[str] = "tool_pyspark.py"
     python_code: ClassVar[str] = dedent(
         """
-        from detool import Operator
-        opt = Operator(config_file="{file}")
+        from detool import Tool
+        opt = Tool(path="{file}")
         opt.execute()
         """.lstrip(
             "\n"
@@ -266,7 +264,7 @@ class SparkSubmitOperator(Operator):
         """
         if self.c.model.type not in ("spark", "spark-submit"):
             raise ToolValidationError(
-                f"Spark Submit Operator does not support for engine type: "
+                f"Spark Submit Tool does not support for engine type: "
                 f"{self.c.model.type!r}"
             )
 

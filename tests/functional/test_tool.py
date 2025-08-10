@@ -1,11 +1,11 @@
 import pytest
 
-from detool.errors import JuteCoreError
-from detool.operator import Operator, SparkSubmitOperator
+from detool.errors import ToolError
+from detool.tools import SparkSubmitTool, Tool
 
 
-def test_operator():
-    op = Operator(
+def test_tool():
+    op = Tool(
         config={
             "type": "duckdb",
             "name": "load_csv",
@@ -27,7 +27,7 @@ def test_operator():
     assert op.c.data["sink"]["type"] == "empty"
     assert op.c.data["type"] == "empty"
 
-    with pytest.raises(JuteCoreError):
+    with pytest.raises(ToolError):
         op.c.fetch(op.c.data)
 
     op.refresh()
@@ -36,17 +36,17 @@ def test_operator():
     assert op.c.model.source.type == "local"
 
 
-def test_operator_raise():
-    with pytest.raises(JuteCoreError):
-        Operator(path="test", config={"test": "bar"})
+def test_tool_raise():
+    with pytest.raises(ToolError):
+        Tool(path="test", config={"test": "bar"})
 
-    with pytest.raises(JuteCoreError):
-        Operator()
+    with pytest.raises(ToolError):
+        Tool()
 
 
-def test_operator_spark_submit_raise():
-    with pytest.raises(JuteCoreError):
-        SparkSubmitOperator(path="test", config={"test": "bar"})
+def test_tool_spark_submit_raise():
+    with pytest.raises(ToolError):
+        SparkSubmitTool(path="test", config={"test": "bar"})
 
-    with pytest.raises(JuteCoreError):
-        SparkSubmitOperator()
+    with pytest.raises(ToolError):
+        SparkSubmitTool()
