@@ -230,13 +230,18 @@ def extract_col_with_pattern(
 
     def _validate_and_append_error(
         col_name: str,
-        parent_cols: list[str],
-        error_cols: list[str],
+        p_cols: list[str],
+        e_cols: list[str],
         patterns: list[str],
     ) -> list[str]:
-        """
-        child func for extract_pyspark_column_names_with_pattern
+        """Child Wrapped function for extract_pyspark_column_names_with_pattern
         validate snake case or whitespace and append error columns
+
+        Args:
+            col_name:
+            p_cols: A parent columns
+            e_cols: An error columns
+            patterns:
         """
         is_found_err: bool = False
         for pattern in patterns:
@@ -248,12 +253,12 @@ def extract_col_with_pattern(
         if is_found_err:
             error_col = (
                 col_name
-                if len(parent_cols) == 0
-                else ".".join(parent_cols) + f".{col_name}"
+                if len(p_cols) == 0
+                else ".".join(p_cols) + f".{col_name}"
             )
-            error_cols.append(error_col)
+            e_cols.append(error_col)
 
-        return error_cols
+        return e_cols
 
     if all(p not in ALLOW_VALIDATE_PATTERNS for p in patterns):
         raise ValueError(
@@ -275,8 +280,8 @@ def extract_col_with_pattern(
             else:
                 error_cols = _validate_and_append_error(
                     col_name=column.name,
-                    parent_cols=parent_cols,
-                    error_cols=error_cols,
+                    p_cols=parent_cols,
+                    e_cols=error_cols,
                     patterns=patterns,
                 )
         elif isinstance(column.dataType, StructType):
@@ -290,8 +295,8 @@ def extract_col_with_pattern(
         else:
             error_cols = _validate_and_append_error(
                 col_name=column.name,
-                parent_cols=parent_cols,
-                error_cols=error_cols,
+                p_cols=parent_cols,
+                e_cols=error_cols,
                 patterns=patterns,
             )
     return error_cols
@@ -300,19 +305,20 @@ def extract_col_with_pattern(
 def validate_col_disallow_pattern(
     schema: StructType, patterns: list[str]
 ) -> None:
-    """
-    validate columns names in dataframe (support nested schema) from the pattern
+    """Validate columns names in dataframe (support nested schema) from the
+    pattern.
     """
     if all(p not in ALLOW_VALIDATE_PATTERNS for p in patterns):
         raise ValueError(
-            f"patterns must contain value in {ALLOW_VALIDATE_PATTERNS}"
+            f"Patterns must contain value in {ALLOW_VALIDATE_PATTERNS}"
         )
 
     error_cols = extract_col_with_pattern(schema=schema, patterns=patterns)
     if len(error_cols) > 0:
-        cols = ", ".join(error_cols)
+        cols: str = ", ".join(error_cols)
         raise ValueError(
-            f"please check column naming convention (must not be {patterns}) on columns: {cols}"
+            f"Please check column naming convention (must not be {patterns!r}) "
+            f"on columns: {cols}"
         )
 
 

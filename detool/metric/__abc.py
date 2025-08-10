@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..__types import DictData
-from ..models import ANY_CONDITION, EmitCondition, MetricData
+from ..models import ANY_CONDITION, EmitCond, MetricData
 from .convertor import Convertor
 
 
@@ -24,7 +24,7 @@ class BaseMetric(BaseModel, ABC):
             "on the implemented emit method."
         ),
     )
-    condition: EmitCondition = Field(
+    condition: EmitCond = Field(
         default=ANY_CONDITION,
         description=(
             "An emitter condition to allow call the emit method after "

@@ -40,8 +40,8 @@ class CalculateMinMaxOfColumns(BaseSparkTransform):
         **kwargs,
     ) -> AnyApplyOutput:
         """Apply to Calculate the minimum and maximum values of given columns
-        only support root level column and primitive type
-        and result is stored in metric transform
+        only support root level column and primitive type and result is stored
+        in metric transform.
         """
         exception_group: list[str] = []
         for column in self.columns:
@@ -121,7 +121,7 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
         **kwargs,
     ) -> AnyApplyOutput:
         """Detect schema change between DF and table schema."""
-        sql = "SELECT * FROM {db_name}.{table_name} LIMIT 0"
+        sql: str = "SELECT * FROM {db_name}.{table_name} LIMIT 0"
         logger.info("detect schema change with sink")
         if self.sink_type is not None:
             logger.info("use sink's configuration from model")
@@ -151,7 +151,7 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
         sql = sql.format(db_name=db_name, table_name=table_name)
         table_schema = spark.sql(sql).schema
         changes = evaluate_schema_change(
-            source_schema=df.schema, table_schema=table_schema
+            src_schema=df.schema, tgt_schema=table_schema
         )
         columns_to_drop = []
         columns_to_add = []

@@ -37,8 +37,8 @@ def extract_struct_type(
         or source_struct.__class__ != table_struct.__class__
     ):
         return evaluate_schema_change(
-            source_schema=source_struct,
-            table_schema=table_struct,
+            src_schema=source_struct,
+            tgt_schema=table_struct,
             parent_cols=parent_cols,
         )
 
@@ -53,53 +53,53 @@ def extract_struct_type(
 
 
 def evaluate_schema_change(
-    source_schema: StructType,
-    table_schema: StructType,
+    src_schema: StructType,
+    tgt_schema: StructType,
     parent_cols: list[str] | None = None,
 ) -> list[Changed]:
     """Evaluate the schema change (add, alter, and drop) between source schema
     and table schema in each field and nested field.
 
     Args:
-        source_schema: PySpark's schema of source DataFrame
-        table_schema: PySpark's schema of table DataFrame
+        src_schema: PySpark's schema of source DataFrame
+        tgt_schema: PySpark's schema of table DataFrame
         parent_cols: List of parent columns of each nested fields
 
     Returns:
-        list[str]: list of schema changes, see structure of dict in list
-            # drop col
-            {
-                'type': 'drop_col',
-                'source_struct_type': StructField(),
-                'parent_cols': [],
-            }
+        list[str]: list of schema changes, see structure of dict in list:
+            Drop column
+            >>> {
+            ...     'type': 'drop_col',
+            ...     'source_struct_type': StructField(),
+            ...     'parent_cols': [],
+            ... }
 
-            # add col
-            {
-                'type': 'add_col',
-                'source_struct_type': StructField(),
-                'add_col_after': '',
-                'parent_cols': [],
-            }
+            Add column
+            >>> {
+            ...     'type': 'add_col',
+            ...     'source_struct_type': StructField(),
+            ...     'add_col_after': '',
+            ...     'parent_cols': [],
+            ... }
 
-            # alter col
-            {
-                'type': 'alter_col',
-                'source_struct_type': StructField(),
-                'target_struct_type': StructField(),
-                'parent_cols': [],
-            }
+            Alter column
+            >>> {
+            ...     'type': 'alter_col',
+            ...     'source_struct_type': StructField(),
+            ...     'target_struct_type': StructField(),
+            ...     'parent_cols': [],
+            ... }
     """
     parent_cols: list[str] = parent_cols or []
     diffs: list[Changed] = []
 
     # NOTE: handle case that source schema and table schema are not the same type
-    if source_schema.__class__ != table_schema.__class__:
+    if src_schema.__class__ != tgt_schema.__class__:
         diffs.append(
             {
                 "type": "alter_col",
-                "source_struct_type": source_schema,
-                "target_struct_type": table_schema,
+                "source_struct_type": src_schema,
+                "target_struct_type": tgt_schema,
                 "parent_cols": parent_cols,
             }
         )
@@ -108,9 +108,9 @@ def evaluate_schema_change(
     ### get to drop columns
     last_drop_col: str | None = None
     to_drop_cols: list[str] = []
-    source_cols: list[str] = [s.name for s in source_schema]
+    source_cols: list[str] = [s.name for s in src_schema]
     t: StructField
-    for t in table_schema:
+    for t in tgt_schema:
         if t.name not in source_cols:
             diffs.append(
                 {
@@ -123,19 +123,19 @@ def evaluate_schema_change(
             last_drop_col = t.name
 
     ### refresh the table schema
-    table_schema: list[str] = [
-        t for t in table_schema if t.name not in to_drop_cols
+    tgt_schema: list[StructField] = [
+        t for t in tgt_schema if t.name not in to_drop_cols
     ]
 
     ### Find new columns, column's data type change, and nested schema change
     nested_schema_changes: list[Changed] = []
     checked_table_cols: list[str] = []
     last_col_added = None
-    _table_cols = [t.name for t in table_schema]
+    _table_cols = [t.name for t in tgt_schema]
 
-    for i, s in enumerate(source_schema):
+    for i, s in enumerate(src_schema):
         s: StructType | StructField
-        for t in table_schema:
+        for t in tgt_schema:
             if s.name == t.name:
                 if s.dataType != t.dataType:
                     # NOTE: ignore s.nullable != t.nullable and
@@ -198,7 +198,7 @@ def evaluate_schema_change(
     return diffs
 
 
-def clean_columns_without_element_from_extract_array(
+def clean_col_except_item_from_extract_array(
     columns: list[str] | str,
 ) -> list[str] | str:
     """Clean the list of columns or columns (str), remove the element (a flag

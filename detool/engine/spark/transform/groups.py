@@ -6,6 +6,8 @@ from pyspark.sql.functions import expr
 
 from ....__types import DictData
 from ....errors import ToolTransformError
+from ....models import Context
+from .. import AnyDataFrame
 from .__abc import AnyApplyOutput, BaseSparkTransform, PairCol, is_pair_col
 
 
@@ -38,14 +40,14 @@ class Expr(BaseSparkTransform):
         return expr(self.query), self.name
 
 
-GroupOp = Annotated[Union[Expr,], Field(discriminator="op")]
+GroupTransform = Annotated[Union[Expr,], Field(discriminator="op")]
 
 
 class Group(BaseSparkTransform):
     """Group Operator transform model."""
 
     op: Literal["group"]
-    transform: list[GroupOp]
+    transform: list[GroupTransform]
 
     def apply(
         self,
@@ -75,3 +77,12 @@ class Group(BaseSparkTransform):
             maps.update(rs)
         df: DataFrame = df.withColumns(maps)
         return df
+
+    def handle_apply(
+        self,
+        df: AnyDataFrame,
+        context: Context,
+        engine: DictData,
+        spark: SparkSession | None = None,
+        **kwargs,
+    ) -> AnyDataFrame: ...

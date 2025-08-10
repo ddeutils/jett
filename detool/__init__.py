@@ -1,1 +1,1 @@
-from .core import Operator
+from .operator import Operator, SparkSubmitOperator

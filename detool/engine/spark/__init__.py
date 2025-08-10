@@ -11,12 +11,12 @@ from typing_extensions import Self
 
 from ...__about__ import __version__
 from ...__types import DictData, PrimitiveType
-from ...models import ColumnDetail, Context, MetricEngine, Result, SubMetric
+from ...models import ColDetail, Context, MetricEngine, Result, SubMetric
 from ...utils import exec_command, regex_by_group, sort_list_str_non_sensitive
 from ..__abc import BaseEngine
 from .__types import AnyDataFrame, AnySparkSession, PairCol
 from .schema_change import (
-    clean_columns_without_element_from_extract_array,
+    clean_col_except_item_from_extract_array,
 )
 from .sink import Sink
 from .source import Source
@@ -208,7 +208,7 @@ class Spark(BaseEngine):
         return Result(
             data=df.collect() if self.enable_collect_result else [],
             columns=[
-                ColumnDetail(column=f.name, dtype=f.dataType.simpleString())
+                ColDetail(column=f.name, dtype=f.dataType.simpleString())
                 for f in schema
             ],
             schema_dict=df.schema.jsonValue(),

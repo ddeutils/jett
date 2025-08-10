@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from ..sink import Sink
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic.functional_validators import field_validator, model_validator
 from pyspark.sql import Column, DataFrame, Row, SparkSession
 from pyspark.sql.functions import (
@@ -27,38 +27,14 @@ from ....utils import get_dt_now, get_random_str_unique, to_snake_case
 from ..utils import (
     extract_col_with_pattern,
     extract_columns_without_array,
-    extract_selectable_columns,
-    has_fix_array_index,
     is_remote_session,
     is_table_exist,
     replace_all_occurrences,
-    replace_fix_array_index_with_x_index,
 )
 from .__abc import AnyApplyOutput, BaseSparkTransform, PairCol
+from .__models import RenameCol
 
 logger = logging.getLogger("detool")
-
-
-class ColumnMap(BaseModel):
-    """Column Map model."""
-
-    name: str = Field(description="A new column name.")
-    source: str = Field(
-        description="A source column statement before alias with alias.",
-    )
-    dtype: str | None = Field(default=None, description="A data type")
-    allow_quote: bool = True
-
-    def get_null_pair(self) -> PairCol:
-        """Create a new null column with specific data type.
-
-        Returns:
-            PairCol: A pair of Column instance and its alias name.
-        """
-        column: Column = lit(None)
-        if self.dtype:
-            column = column.cast(self.dtype)
-        return column, self.name
 
 
 class Expr(BaseSparkTransform):
@@ -97,7 +73,13 @@ class SQL(BaseSparkTransform):
     """SQL Transform model."""
 
     op: Literal["sql_transform"]
-    query: str = Field(description="A query statement.")
+    query: str = Field(
+        description=(
+            "A query statement that will use on the `sql` feature. If you want "
+            "to interact with the current DataFrame, you should use it with "
+            "`temp_table` table on this statement."
+        )
+    )
 
     def apply(
         self,
@@ -233,38 +215,6 @@ class RenameSnakeCase(BaseSparkTransform):
         return df
 
 
-class RenameCol(ColumnMap):
-    """Rename Column"""
-
-    def get_rename_pair(self) -> PairCol:
-        column: Column = (
-            expr(self.source)
-            if has_fix_array_index(self.source)
-            else col(self.source)
-        )
-        if self.dtype:
-            column = column.cast(self.dtype)
-
-        return column, self.name
-
-    def get_rename_pair_fix_non_existed_by_null(self, df: DataFrame) -> PairCol:
-        _rename_cache_select_cols: list[str] | None = None
-        if not _rename_cache_select_cols:
-            _rename_cache_select_cols = extract_selectable_columns(df.schema)
-
-        rep_from_col: str = self.source
-        if has_fix_array_index(rep_from_col):
-            rep_from_col = replace_fix_array_index_with_x_index(rep_from_col)
-
-        if rep_from_col not in _rename_cache_select_cols:
-            logger.info(
-                f"Fill null on column: {self.name} (dtype {self.dtype}) due to "
-                f"column {self.source} not found",
-            )
-            return self.get_null_pair()
-        return self.get_rename_pair()
-
-
 class RenameColumns(BaseSparkTransform):
     """Rename Columns Transform model."""
 
@@ -380,7 +330,7 @@ class DropColumns(BaseSparkTransform):
             spark (SparkSession, default None): A Spark session.
 
         Returns:
-
+            DataFrame:
         """
         current_cols = df.columns
         target_cols = self.columns
@@ -416,7 +366,7 @@ class CleanMongoJsonStr(BaseSparkTransform):
 
         func_name: str = "cleanMongoJsonString"
         if self.use_java:
-            java_class_name: str = "dap.CleanMongoJsonStringUDF"
+            java_class_name: str = "custom.CleanMongoJsonStringUDF"
             spark.udf.registerJavaFunction(
                 func_name, java_class_name, StringType()
             )
@@ -533,16 +483,17 @@ class Scd2(BaseSparkTransform):
 
         Notes:
             A method to prepare scd type 2 data. It has 4 steps:.
-                1: Get df_target from data warehouse (if exists)
-                2: Add `_scd2_start_time` and `_scd_end_time` column to df_source
-                    - `_scd2_start_time`:
-                        - if id of the row already exist in target table,
-                          _scd2_start_time will be update_key for that row
-                        - if id of the row doesn't exist in target table (new record),
-                          _scd2_start_time will be create_key for that row
-                    - `_scd2_end_time`: Defaults to NULL
-                3: Update df_target._scd_end_time from null to df_source._scd2_start_time in some rows
-                4: Combine 2 df from step 2 and 3 together and send it to sink process
+
+            1: Get df_target from data warehouse (if exists)
+            2: Add `_scd2_start_time` and `_scd_end_time` column to df_source
+                - `_scd2_start_time`:
+                    - if id of the row already exist in target table,
+                      _scd2_start_time will be update_key for that row
+                    - if id of the row doesn't exist in target table (new record),
+                      _scd2_start_time will be create_key for that row
+                - `_scd2_end_time`: Defaults to NULL
+            3: Update df_target._scd_end_time from null to df_source._scd2_start_time in some rows
+            4: Combine 2 df from step 2 and 3 together and send it to sink process
 
         Args:
             df (Any): A Spark DataFrame.
@@ -557,6 +508,7 @@ class Scd2(BaseSparkTransform):
         """
         db_name: str | None = None
         table_name: str | None = None
+
         # NOTE: check if config_dict is not empty (not {})
         _sink: "Sink" = engine["engine"].sink
         if _sink.type in ("iceberg-hdfs",):
@@ -582,17 +534,17 @@ class Scd2(BaseSparkTransform):
                 table_name=table_name,
             )
         ):
-            # --- step 1: get df_tgt
+            # Step01: get df_tgt
             tgt_df = spark.sql(f"SELECT * FROM {db_name}.{table_name}").filter(
                 col(self.col_end_name).isNull()
             )
-            # --- step 2: add _scd2_start_time and _scd_end_time column to df_source
+            # Step02: add _scd2_start_time and _scd_end_time column to df_source
             src_df = self._add_start_and_end_in_src(tgt_df=tgt_df, src_df=df)
 
-            # --- step 3: update df_tgt._scd_end_time from null to df_source._scd2_start_time
+            # Step03: update df_tgt._scd_end_time from null to df_source._scd2_start_time
             rs_df = self._update_end_time_in_tgt(tgt_df=tgt_df, src_df=src_df)
 
-            # --- step 4: combine 2 df together
+            # Step04: combine 2 df together
             return rs_df.unionByName(src_df, allowMissingColumns=True)
 
         # NOTE: if target table doesn't exist or db_name and table name are not
@@ -609,18 +561,22 @@ class Scd2(BaseSparkTransform):
         tgt_df: DataFrame,
         src_df: DataFrame,
     ) -> DataFrame:
-        """Add _scd2_start_time and _scd_end_time column to df_source"""
-        # get existing id in target table and max updated_at value
+        """Add `_scd2_start_time` and `_scd_end_time` columns to the source
+        DataFrame.
+        """
+        # NOTE: get existing id in target table and max updated_at value
         df_t_id = tgt_df.groupby(self.merge_key).agg(
             spark_max(self.update_key).alias("_max_update_key")
         )
         df_s_merge = src_df.join(df_t_id, on=self.merge_key, how="left")
 
-        # persist it before checking the wrong updated_at value to prevent recompute data
+        # NOTE: persist it before checking the wrong updated_at value to prevent
+        #   recompute data.
         df_s_merge.persist()
 
-        # check the wrong updated_at value from source
-        # if target['_max_update_key'] > source[update_key]: it should not happen, we cannot get the past data from source.
+        # NOTE: Check the wrong updated_at value from source
+        #   - if target['_max_update_key'] > source[update_key]: it should not
+        #       happen, we cannot get the past data from source.
         select_col: list[str] = self.merge_key + [
             self.update_key,
             "_max_update_key",
@@ -628,6 +584,7 @@ class Scd2(BaseSparkTransform):
         condition: Column = col("_max_update_key") > col(self.update_key)
         wrong_df: DataFrame = df_s_merge.where(condition).select(*select_col)
         wrong_data: list[Row] = wrong_df.take(1)
+
         # NOTE: it's already persisted so should not take that much time to
         #   execute take(1)
         if len(wrong_data) > 0:
@@ -693,6 +650,8 @@ class Scd2(BaseSparkTransform):
 
 
 class ExplodeArrayColumn(BaseSparkTransform):
+    """Explode Array Column Operation Transform model."""
+
     op: Literal["explode_array_column"]
     explode_col: str
     is_explode_outer: bool = True
@@ -734,7 +693,7 @@ class ExplodeArrayColumn(BaseSparkTransform):
                 "`position_prefix_name`"
             )
 
-        logger.info("explode array column")
+        logger.info("Start Explode array column")
         if not self.is_return_position:
             if self.is_explode_outer:
                 return df.withColumn(
@@ -745,7 +704,7 @@ class ExplodeArrayColumn(BaseSparkTransform):
             )
 
         cols_name = df.columns
-        select_cols = [
+        select_cols: list[str] = [
             col_name
             for col_name in cols_name
             if not col_name == self.explode_col
@@ -779,7 +738,8 @@ class FlattenAllExceptArray(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
-        """
+        """Apply to Flatten all Columns.
+
         Args:
             df (Any): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
@@ -793,12 +753,12 @@ class FlattenAllExceptArray(BaseSparkTransform):
         """
         transform_dict: dict[str, Column] = {}
         for c in extract_columns_without_array(schema=df.schema):
-            flatten_col = "_".join(c.split("."))
+            flatten_col: str = "_".join(c.split("."))
             transform_dict[flatten_col] = col(c)
 
-        logger.info("flatten all columns except array")
+        logger.info("Start Flatten all columns except array")
         for k, v in transform_dict.items():
-            logger.info("target col: %s, from: %s", k, v)
+            logger.info(f"> Target col: {k}, from: {v}")
         return df.withColumns(transform_dict).select(
             *list(transform_dict.keys())
         )

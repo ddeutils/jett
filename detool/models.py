@@ -1,13 +1,5 @@
 """Model modules keep all necessary models that use for each engine, metric, and
 convertor.
-
-Models:
-    Shape:
-    ColumnDetail:
-    Result:
-
-Enums:
-    EmitCondition:
 """
 
 from datetime import datetime
@@ -40,7 +32,7 @@ class Shape(BaseModel):
         return cls(rows=rows, columns=columns)
 
 
-class ColumnDetail(BaseModel):
+class ColDetail(BaseModel):
     """A shared data structure of column detail that should be use only in
     Result model.
     """
@@ -56,11 +48,11 @@ class Result(BaseModel):
         default_factory=list,
         description="A sample data that already save to the sink.",
     )
-    columns: list[ColumnDetail] = Field(default_factory=list)
+    columns: list[ColDetail] = Field(default_factory=list)
     schema_dict: dict[str, Any] = Field(default_factory=dict)
 
 
-class EmitCondition(str, Enum):
+class EmitCond(str, Enum):
     """An Enum for Metric Emitter Condition."""
 
     ONLY_SUCCESS = "only_success"
@@ -68,9 +60,9 @@ class EmitCondition(str, Enum):
     ANY = "any"
 
 
-ANY_CONDITION = EmitCondition.ANY
-ONLY_SUCCESS = EmitCondition.ONLY_SUCCESS
-ONLY_FAILED = EmitCondition.ONLY_FAILED
+ANY_CONDITION = EmitCond.ANY
+ONLY_SUCCESS = EmitCond.ONLY_SUCCESS
+ONLY_FAILED = EmitCond.ONLY_FAILED
 
 
 class BasicFilter(BaseModel):
@@ -264,7 +256,7 @@ class MetricData(BaseModel):
 
 
 class Context(TypedDict, total=False):
-    """Context dict type for pre-getter on any IDE."""
+    """Context dict type for pre-validate."""
 
     # NOTE: Before execute
     author: str | None

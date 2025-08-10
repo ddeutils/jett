@@ -1,7 +1,7 @@
 import pytest
 
-from detool.core import Operator, SparkSubmitOperator
 from detool.errors import JuteCoreError
+from detool.operator import Operator, SparkSubmitOperator
 
 
 def test_operator():

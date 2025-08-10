@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from detool.core import Operator
 from detool.engine.__abc import Result
+from detool.operator import Operator
 
 from ...utils import SPARK_DISABLE
 

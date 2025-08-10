@@ -29,7 +29,16 @@ class GCMDecrypt(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> PairCol:
-        """Decryption with GCM mode."""
+        """Decryption with GCM mode.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+        """
         from Crypto.Cipher import AES
         from Crypto.Hash import HMAC, SHA256
 
@@ -39,8 +48,12 @@ class GCMDecrypt(BaseSparkTransform):
             bs: int,
             encode: Literal["base64"],
         ) -> str:  # pragma: no cover
-            """Create inside function that will use for making UDF function.
-            Fixing the case of SPARK-5063.
+            """Create Wrapped function that will use for making PySpark UDF
+            function via Python API.
+
+            Warning: Fixing the case of SPARK-5063.
+
+            Returns: str
             """
             secret_key = secret_key.encode()
             nonce = HMAC.new(secret_key, msg=b"", digestmod=SHA256).digest()
@@ -67,9 +80,9 @@ class GCMDecrypt(BaseSparkTransform):
 
             return decrypted_text
 
-        secret = self.secret_key.get_secret_value()
-        block_size = self.block_size
-        encode_mode = self.encode_mode
+        secret: str = self.secret_key.get_secret_value()
+        block_size: int = self.block_size
+        encode_mode: Literal["base64"] = self.encode_mode
         decrypt_udf = udf(
             lambda text: __decrypt_gcm(
                 cipher_test=text,

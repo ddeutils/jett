@@ -8,7 +8,7 @@ from duckdb.experimental.spark.sql import SparkSession
 from pydantic import Field
 
 from ...__types import DictData
-from ...models import ColumnDetail, Context, Result
+from ...models import ColDetail, Context, Result
 from ..__abc import BaseEngine
 from .sink import Sink
 from .source import Source
@@ -57,7 +57,7 @@ class DuckDB(BaseEngine):
         return Result(
             data=arrow_table.to_pylist(),
             columns=[
-                ColumnDetail(column=f.name, dtype=str(f.type)) for f in schema
+                ColDetail(column=f.name, dtype=str(f.type)) for f in schema
             ],
             schema_dict={f.name: f.type for f in schema},
         )

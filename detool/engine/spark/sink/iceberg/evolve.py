@@ -16,7 +16,7 @@ from pyspark.sql.types import (
 
 from .....utils import clean_string
 from ...schema_change import (
-    clean_columns_without_element_from_extract_array,
+    clean_col_except_item_from_extract_array,
     evaluate_schema_change,
     summarize_changes,
 )
@@ -314,8 +314,8 @@ class Evolver:
             # primitive type, remove last column which is element
             columns_str = ".".join(columns[:-1])
 
-        column_without_element = (
-            clean_columns_without_element_from_extract_array(columns=columns)
+        column_without_element = clean_col_except_item_from_extract_array(
+            columns=columns
         )
         is_safe_update = column_has_only_null_or_empty_array(
             df=self.df, column=".".join(column_without_element)
@@ -392,8 +392,8 @@ class Evolver:
             f"LIMIT 0"
         ).schema
         return evaluate_schema_change(
-            source_schema=source_schema,
-            table_schema=table_schema,
+            src_schema=source_schema,
+            tgt_schema=table_schema,
         )
 
     def evolve_schema(self) -> None:

@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from detool.core import Operator
 from detool.engine.__abc import Result
+from detool.operator import Operator
 
 
 def test_duckdb_csv_to_console(root_path: Path):
