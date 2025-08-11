@@ -46,7 +46,7 @@ class LocalJsonFile(BaseSource):
 
     type: Literal["local"]
     file_format: Literal["json"]
-    path: str
+    path: str = Field(description="A path of local JSON file.")
     format: Literal["newline_delimited", "array"] = "newline_delimited"
 
     def load(
@@ -57,6 +57,7 @@ class LocalJsonFile(BaseSource):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
+        # ARCHIVE:
         # df = duckdb.sql(
         #     f"""SELECT * FROM read_json_objects(
         #         '{self.path}'

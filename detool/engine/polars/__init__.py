@@ -2,6 +2,7 @@ import logging
 from typing import Any, Literal
 
 from polars import DataFrame
+from pydantic.functional_validators import field_validator
 
 from ...__types import DictData
 from ...models import Context, Result
@@ -17,7 +18,15 @@ class Polars(BaseEngine):
 
     type: Literal["polars"]
     source: Source
-    sink: Sink
+    sink: list[Sink]
+
+    @field_validator(
+        "sink", mode="before", json_schema_input_type=Sink | list[Sink]
+    )
+    def __prepare_sink(cls, data: Any) -> Any:
+        if isinstance(data, Sink):
+            return list[data]
+        return data
 
     def execute(
         self,
@@ -27,7 +36,11 @@ class Polars(BaseEngine):
         logger.info("Start execute with Spark engine.")
         df: DataFrame = self.source.handle_load(context, engine=engine)
         df: DataFrame = self.handle_apply(df, context, engine=engine)
-        self.sink.handle_save(df, context, engine=engine)
+
+        # NOTE: Start multi-sink by sequential strategy.
+        for _sink in self.sink:
+            _sink.handle_save(df, context, engine=engine)
+
         return df
 
     def apply(

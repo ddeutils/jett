@@ -4,9 +4,9 @@
 This project provide the ETL template for implemented DataFrame engine like
 `PySpark`, `Duckdb`, `Polars`, etc.
 
-**:star: Features**:
+**Supported Features**:
 
-- Support JSON Schema validation.
+- JSON Schema Validation on any IDE.
 
 ## 📦 Installation
 

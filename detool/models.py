@@ -16,7 +16,13 @@ from .utils import get_dt_latest, get_dt_now
 
 
 class Shape(BaseModel):
-    """Shape model for keeping simple log for the Source and Sink metric model."""
+    """Shape model for keeping simple log for the Source and Sink metric model.
+
+    Examples:
+        >>> Shape(rows=1, columns=2)
+
+        >>> Shape.from_tuple((1, 2))
+    """
 
     rows: int = Field(default=0, ge=0, description="A row/record number.")
     columns: int = Field(default=0, ge=0, description="A column/field number.")
@@ -57,10 +63,10 @@ class EmitCond(str, Enum):
 
     ONLY_SUCCESS = "only_success"
     ONLY_FAILED = "only_failed"
-    ANY = "any"
+    ALWAYS = "always"
 
 
-ANY_CONDITION = EmitCond.ANY
+ALWAYS = EmitCond.ALWAYS
 ONLY_SUCCESS = EmitCond.ONLY_SUCCESS
 ONLY_FAILED = EmitCond.ONLY_FAILED
 
@@ -163,37 +169,42 @@ class MetricOperator(SubMetricData):
     """Metric Operator model."""
 
     type: Literal["order"]
-    transform_op: str
+    trans_op: str
 
 
-class MetricTransformOrder(MetricOperator):
+class MetricOperatorOrder(MetricOperator):
+    """Metric Operator Transform order model."""
+
     transform_pre: dict[str, Any] = Field(default_factory=dict)
     transform_post: dict[str, Any] = Field(default_factory=dict)
 
 
-class MetricTransformGroup(SubMetricData):
+class MetricOperatorGroup(SubMetricData):
+    """Metric Operator Transform group model."""
+
     type: Literal["group"]
+    trans_op: Literal["group"] = "group"
     transforms: list[MetricOperator] = Field(default_factory=list)
     transform_pre: dict[str, Any] = Field(default_factory=dict)
     transform_post: dict[str, Any] = Field(default_factory=dict)
 
 
-SubMetric = Annotated[
+MetricOperatorTransform = Annotated[
     Union[
-        MetricTransformGroup,
-        MetricTransformOrder,
+        MetricOperatorGroup,
+        MetricOperatorOrder,
     ],
     Field(
         discriminator="type",
-        description="A sub-metric operator transform.",
+        description="A metric operator transform that dynamic with the `type`.",
     ),
 ]
 
 
 class MetricTransform(SubMetricData):
-    transforms: list[SubMetric] = Field(
+    transforms: list[MetricOperatorTransform] = Field(
         default_factory=list,
-        description="List of all sub-transform operator metric.",
+        description="List of transform operator metric.",
     )
 
 

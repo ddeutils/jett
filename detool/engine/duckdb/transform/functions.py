@@ -4,7 +4,7 @@ from typing import Literal
 
 import duckdb
 from duckdb import DuckDBPyRelation as Relation
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import Self
 
@@ -13,6 +13,7 @@ from ....errors import ToolTransformError
 from ....utils import join_newline, to_snake_case
 from ...__abc import BaseEngine
 from .__abc import BaseDuckDBTransform
+from .__models import ColumnMap
 
 logger = logging.getLogger("detool")
 
@@ -76,24 +77,6 @@ class RenameSnakeCase(BaseDuckDBTransform):
         ]
         logger.info(f"Start convert to snakecase: \n{join_newline(new_cols)}")
         return duckdb.sql(f"SELECT {', '.join(new_cols)} FROM df")
-
-
-class ColumnMap(BaseModel):
-    """Column Map model."""
-
-    name: str = Field(description="A new column name.")
-    source: str = Field(
-        description="A source column statement before alias with alias.",
-    )
-    allow_quote: bool = True
-
-    def gen_source(self) -> str:
-        """Generate source statement with quote flag."""
-        return (
-            f"{self.source} AS {self.name}"
-            if self.allow_quote
-            else f'"{self.source}" AS {self.name}'
-        )
 
 
 class RenameColumns(BaseDuckDBTransform):

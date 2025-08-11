@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
+from duckdb.experimental.spark.sql.types import StructType
 from pydantic import Field
 from pyspark.sql import Column, DataFrame, SparkSession
 from pyspark.sql.connect.column import Column as ColumnRemote
@@ -9,9 +10,16 @@ from pyspark.sql.connect.session import DataFrame as DataFrameRemote
 
 from ....__types import DictData
 from ....errors import ToolTransformError
-from ....models import Context, MetricOperator, MetricTransformOrder
+from ....models import (
+    Context,
+    MetricOperator,
+    MetricOperatorOrder,
+    MetricOperatorTransform,
+)
+from ....utils import sort_list_str_non_sensitive
 from ...__abc import BaseTransform
 from ..__types import AnyDataFrame, PairCol
+from ..utils import extract_columns_without_array, schema2dict
 
 AnyApplyOutput = PairCol | list[PairCol] | AnyDataFrame
 
@@ -54,6 +62,7 @@ class BaseSparkTransform(BaseTransform, ABC):
         self,
         df: DataFrame,
         engine: DictData,
+        metric: MetricOperatorOrder,
         *,
         spark: SparkSession | None = None,
         **kwargs,
@@ -66,6 +75,8 @@ class BaseSparkTransform(BaseTransform, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricOperatorOrder): A metric transform that was set from
+                handler step for passing custom metric data.
             spark (SparkSession, default None): A Spark session.
 
         Returns:
@@ -79,11 +90,24 @@ class BaseSparkTransform(BaseTransform, ABC):
         self,
         df: DataFrame,
         engine: DictData,
+        metric: MetricOperator,
         *,
         spark: SparkSession | None = None,
         **kwargs,
     ) -> PairCol | list[PairCol]:
-        """Apply group transform."""
+        """Apply group transform method that is optional apply for supported
+        group transform model.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            metric (MetricOperator): A metric transform that was set from
+                handler step for passing custom metric data.
+            spark (SparkSession, default None): A Spark session.
+        """
         raise NotImplementedError(
             f"Transform: {self.__class__.__name__} on Spark engine does not "
             f"implement the group operation, please change this to priority "
@@ -99,13 +123,29 @@ class BaseSparkTransform(BaseTransform, ABC):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> dict[str, Column]:
-        """Handle Apply group transform."""
-        metric = MetricOperator(type="order", transform_op=self.op)
+        """Handle Apply group transform.
+
+        Args:
+            df (AnyDataFrame): A Spark DataFrame.
+            context: (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            dict[str, Column]: A mapping of alias name and Column object.
+        """
+        logger.info(f"👷🔨 Handle Apply Group Operator: {self.op!r}")
+        metric = MetricOperator(type="order", trans_op=self.op)
         context["metric_group_transform"].transforms.append(metric)
-        logger.info(f"🔨 Handle Apply Group Operator: {self.op!r}")
         try:
             output: PairCol | list[PairCol] = self.apply_group(
-                df, engine, spark=spark, **kwargs
+                df, engine, metric=metric, spark=spark, **kwargs
             )
             if is_pair_col(output):
                 rs: dict[str, Column] = {output[1]: output[2]}
@@ -154,11 +194,14 @@ class BaseSparkTransform(BaseTransform, ABC):
         Returns:
             AnyDataFrame: A applied Spark DataFrame.
         """
-        metric = MetricTransformOrder(type="order", transform_op=self.op)
-        context["metric_operator"].append(metric)
         logger.info(f"👷🔧 Handle Apply Operator: {self.op!r}")
+        metric = MetricOperatorOrder(type="order", trans_op=self.op)
+        context["metric_operator"].append(metric)
         try:
-            output: AnyApplyOutput = self.apply(df, engine=engine, **kwargs)
+            pre_schema: StructType = df.schema
+            output: AnyApplyOutput = self.apply(
+                df, engine=engine, metric=metric, **kwargs
+            )
             if is_pair_col(output):
                 df = df.withColumn(output[1], output[0])
             elif isinstance(output, list) and all(
@@ -182,6 +225,33 @@ class BaseSparkTransform(BaseTransform, ABC):
                     f"🏭 Cache the DataFrame after apply operator: {self.op!r}"
                 )
                 df.cache()
+            self.sync_schema(pre_schema, df.schema, metric=metric, spark=spark)
             return df
         finally:
             metric.finish()
+
+    @staticmethod
+    def sync_schema(
+        pre: StructType,
+        post: StructType,
+        *,
+        metric: MetricOperatorTransform,
+        spark: SparkSession | None = None,
+    ) -> None:
+        pre_schema = spark.createDataFrame(data=[], schema=pre).schema
+        post_schema = spark.createDataFrame(data=[], schema=post).schema
+        pre_no_array = sort_list_str_non_sensitive(
+            extract_columns_without_array(schema=pre_schema)
+        )
+        post_no_array = sort_list_str_non_sensitive(
+            extract_columns_without_array(schema=post_schema)
+        )
+        # NOTE: Start update the pre- and post-schema metric.
+        metric.transform_pre = {
+            "schema": schema2dict(pre, sorted_by_name=True),
+            "schema_no_array": pre_no_array,
+        }
+        metric.transform_post = {
+            "schema": schema2dict(post, sorted_by_name=True),
+            "schema_no_array": post_no_array,
+        }

@@ -64,7 +64,7 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         **kwargs,
     ) -> Any:
         ts: float = time.monotonic()
-        metric = MetricOperator(type="order", transform_op=self.op)
+        metric = MetricOperator(type="order", trans_op=self.op)
         logger.info(f"🔨 Handle Apply Group Operator: {self.op!r}")
         output: PairCol | list[PairCol] = self.apply_group(
             df, engine, spark=spark, **kwargs

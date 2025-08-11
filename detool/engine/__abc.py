@@ -23,17 +23,17 @@ from pydantic.functional_validators import field_validator
 from ..__types import DictData
 from ..metric import Metric
 from ..models import (
-    ANY_CONDITION,
+    ALWAYS,
     ONLY_FAILED,
     ONLY_SUCCESS,
     Context,
     MetricData,
     MetricEngine,
+    MetricOperatorGroup,
+    MetricOperatorOrder,
     MetricSink,
     MetricSource,
     MetricTransform,
-    MetricTransformGroup,
-    MetricTransformOrder,
     Result,
     Shape,
 )
@@ -128,6 +128,7 @@ class BaseEngine(BaseModel, ABC):
         self,
         context: Context,
         engine: DictData,
+        metric: MetricEngine,
     ) -> Any:
         """Abstract execute method for any engine should implement before
         plugin to this package.
@@ -140,6 +141,8 @@ class BaseEngine(BaseModel, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricEngine): A metric engine that was set from handler
+                step for passing custom metric data.
 
         Notes:
             It same some recommended rule that it should to follow:
@@ -173,6 +176,7 @@ class BaseEngine(BaseModel, ABC):
         df: Any,
         context: Context,
         engine: DictData,
+        metric: MetricTransform,
         **kwargs,
     ) -> Any:
         """Abstract apply method for start running the engine transform for each
@@ -188,6 +192,8 @@ class BaseEngine(BaseModel, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricTransform): A metric transform that was set from
+                handler step for passing custom metric data.
         """
 
     def post_execute(
@@ -257,7 +263,7 @@ class BaseEngine(BaseModel, ABC):
         engine: DictData = self.set_engine_context(context)
         exception: Exception | None = None
         try:
-            rs = self.execute(context, engine=engine)
+            rs = self.execute(context, engine=engine, metric=metric)
             return self.set_result(rs, context)
         except Exception as e:
             exception = e
@@ -308,15 +314,18 @@ class BaseEngine(BaseModel, ABC):
                 operator.
         """
         metric = MetricTransform()
+        metric_op_group = MetricOperatorGroup(type="group")
         context.update(
             {
                 "metric_transform": metric,
                 "metric_operator": [],
-                "metric_group_transform": MetricTransformGroup(type="group"),
+                "metric_group_transform": metric_op_group,
             }
         )
         try:
-            df: Any = self.apply(df, context, engine=engine, **kwargs)
+            df: Any = self.apply(
+                df, context, engine=engine, metric=metric, **kwargs
+            )
             return df
         except Exception as e:
             logger.error(
@@ -324,6 +333,7 @@ class BaseEngine(BaseModel, ABC):
             )
             raise
         finally:
+            metric_op_group.finish()
             metric.transforms = context.get("metric_operator", [])
             metric.finish()
 
@@ -338,7 +348,7 @@ class BaseEngine(BaseModel, ABC):
         """
         data = MetricData.model_validate(context)
         for metric in self.metrics:
-            if metric.condition != ANY_CONDITION and (
+            if metric.condition != ALWAYS and (
                 (metric.condition == ONLY_FAILED and data.run_result)
                 or (metric.condition == ONLY_SUCCESS and not data.run_result)
             ):
@@ -380,6 +390,7 @@ class BaseSource(BaseModel, ABC):
     def load(
         self,
         engine: DictData,
+        metric: MetricSource,
         **kwargs,
     ) -> tuple[Any, Shape]:
         """Load abstract method for this source model.
@@ -389,6 +400,8 @@ class BaseSource(BaseModel, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricSource): A metric source that was set from handler
+                step for passing custom metric data.
         """
 
     @abstractmethod
@@ -420,10 +433,11 @@ class BaseSource(BaseModel, ABC):
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
         """
+        logger.info(f"👷🚰 Handle Source: {self.type!r} ...")
         metric = MetricSource(type=self.type, inlet=self.inlet())
         context.update({"metric_source": metric})
         try:
-            df, shape = self.load(engine=engine, **kwargs)
+            df, shape = self.load(engine=engine, metric=metric, **kwargs)
             metric.read_row_count = shape.rows
             metric.read_column_count = shape.columns
             return df
@@ -453,6 +467,7 @@ class BaseTransform(BaseModel, ABC):
         self,
         df: Any,
         engine: DictData,
+        metric: MetricOperatorOrder,
         **kwargs,
     ) -> Any:
         """Apply operator transform abstraction method.
@@ -463,6 +478,8 @@ class BaseTransform(BaseModel, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricOperatorOrder): A metric transform that was set from
+                handler step for passing custom metric data.
         """
 
     def handle_apply(
@@ -484,9 +501,9 @@ class BaseTransform(BaseModel, ABC):
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
         """
-        metric = MetricTransformOrder(type="order", transform_op=self.op)
-        context["metric_operator"].append(metric)
         logger.info(f"👷🔧 Handle Apply Operator: {self.op!r}")
+        metric = MetricOperatorOrder(type="order", trans_op=self.op)
+        context["metric_operator"].append(metric)
         try:
             return self.apply(df, engine=engine, **kwargs)
         finally:
@@ -506,7 +523,7 @@ class BaseTransform(BaseModel, ABC):
         ant = cls.model_fields["op"].annotation
         if get_origin(ant) is Literal:
             return get_args(ant)
-        raise TypeError(f"Does not support `op` override type: {ant}")
+        raise TypeError(f"Does not support `op` override with type: {ant}")
 
 
 class BaseSink(BaseModel, ABC):
@@ -519,6 +536,7 @@ class BaseSink(BaseModel, ABC):
         self,
         df: Any,
         engine: DictData,
+        metric: MetricSink,
         **kwargs,
     ) -> tuple[Any, Shape]:
         """Save abstract method for this sink model.
@@ -529,6 +547,8 @@ class BaseSink(BaseModel, ABC):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricSink): A metric sink that was set from handler step
+                for passing custom metric data.
 
         Returns:
             tuple[Any, Shape]: A pair of an any DataFrame API and its Shape
@@ -572,12 +592,13 @@ class BaseSink(BaseModel, ABC):
         Returns:
             Any: An Any DataFrame API specific with implemented engine.
         """
+        logger.info(f"👷🎯 Handle Sink: {self.type!r} ...")
         metric = MetricSink(
             type=self.type, outlet=self.outlet(), destination=self.dest()
         )
         context.update({"metric_sink": metric})
         try:
-            df, shape = self.save(df, engine=engine, **kwargs)
+            df, shape = self.save(df, engine=engine, metric=metric, **kwargs)
             metric.write_row_count = shape.rows
             metric.write_column_count = shape.columns
             if "mode" in self.model_fields:

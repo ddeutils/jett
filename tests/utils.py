@@ -9,7 +9,7 @@ from pyspark.sql import SparkSession
 
 logger = logging.getLogger("detool")
 
-SPARK_DISABLE: bool = not bool(int(os.getenv("JUTE__TEST__SPARK_ENABLE", "0")))
+SPARK_DISABLE: bool = not bool(int(os.getenv("TOOL__TEST__SPARK_ENABLE", "0")))
 
 
 def filter_keys(
@@ -62,7 +62,7 @@ def get_spark_session(test_path: Path | None = None) -> SparkSession:
     # NOTE: force unittest uses only local dir, otherwise, spark will fail due
     # to it cannot mount with external storage.
     spark = (
-        SparkSession.builder.appName("ForUnittest")
+        SparkSession.builder.appName("Session For Unittest")
         .master("local[*]")
         # .config("spark.jars", ",".join(jars))
         .config("spark.jars.packages", ",".join(jars_packages))

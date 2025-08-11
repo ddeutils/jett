@@ -25,6 +25,13 @@ logger = logging.getLogger("detool")
 class ToolModel(BaseModel):
     """Core Tool model that keep the parsing engine model and the original
     config data.
+
+    Constructors:
+        from_yaml: Construct Tool model with a YAML file path.
+        from_dict: Construct Tool model with a dict object.
+
+    Methods:
+        fetch:
     """
 
     model: Engine = Field(
@@ -154,7 +161,7 @@ class Tool:
         return f"Tool Engine: {self.c.model.type}"
 
     def post_init(self) -> None:
-        """Post initialize method."""
+        """Post initialize method for calling after this tool have initialed."""
 
     def refresh(self) -> Self:
         """Refresh the config argument with reload again from config path or
@@ -166,6 +173,25 @@ class Tool:
             else ToolModel.from_dict(self._config)
         )
         return self
+
+    def wrapped_execute(self, context: Context) -> Result:
+        """Wrapped Execute with different use-case of tool that inherit this
+        tool object.
+
+        Args:
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+        """
+        # IMPORTANT: Recreate model before start handle execution.
+        #   We replace env var template before execution for secrete value.
+        logger.info(
+            "🔐 Passing environment variables to the Tool config data and "
+            "refresh ToolModel before execute."
+        )
+        self.c.fetch(override=substitute_env_vars(self.c.data))
+        return self.c.model.handle_execute(context=context)
 
     def execute(
         self,
@@ -181,7 +207,7 @@ class Tool:
 
         Returns:
             Result: A Result object that already return from config engine
-            execution result.
+                execution result.
         """
         ts: float = time.monotonic()
         start_date: datetime = get_dt_now()
@@ -195,28 +221,20 @@ class Tool:
         exception_name: str | None = None
         exception_traceback: str | None = None
         run_result: bool = True
-        logger.info(f"🚀 Tool version: {__version__}")
-        logger.info("Start core operator execution:")
+        logger.info("Start Tool Execution:")
+        logger.info(f"... 🚀 Tool Version: {__version__}")
         logger.info(f"... 👷 Author: {self.c.model.author}")
         logger.info(f"... 👨‍💻 Owner: {self.c.model.owner}")
         logger.info(f"... 🕒 Start: {start_date:%Y-%m-%d %H:%M:%S}")
         try:
-            # IMPORTANT: Recreate model before start handle execution.
-            #   We replace env var template before execution for secrete value.
-            logger.info(
-                "🔐 Passing environment variables to the Tool config data and "
-                "refresh ToolModel before execute."
-            )
-            self.c.fetch(override=substitute_env_vars(self.c.data))
-            rs: Result = self.c.model.handle_execute(context=context)
+            rs: Result = self.wrapped_execute(context=context)
             logger.info("✅ Execute successful!!!")
         except Exception as e:
             run_result = False
             exception = e
             exception_name = e.__class__.__name__
             exception_traceback = traceback.format_exc()
-            logger.error(f"😎👌🔥 Execution catch: {exception_name}")
-            logger.error(f"Trackback:\n{exception_traceback}")
+            logger.exception(f"😎👌🔥 Execution catch: {exception_name}")
         finally:
             # NOTE: Start prepare metric data after engine execution end. It
             #   will catch error exception class to this metric data if the
@@ -251,8 +269,8 @@ class SparkSubmitTool(Tool):
     python_code: ClassVar[str] = dedent(
         """
         from detool import Tool
-        opt = Tool(path="{file}")
-        opt.execute()
+        tool = Tool(path="{file}")
+        tool.execute()
         """.lstrip(
             "\n"
         )
@@ -300,61 +318,31 @@ class SparkSubmitTool(Tool):
         self.c.data["entrypoint"] = py_filepath
         self.c.data["type"] = "spark-submit"
 
-    def execute(
-        self,
-        *,
-        allow_raise: bool = False,
-    ) -> Result:
-        """Prepare spark-submit command before run.
+    def wrapped_execute(self, context: Context) -> Result:
+        """Wrapped Execute that will create temp-file before start Spark submit
+        process.
 
         Args:
-            allow_raise: bool
-                If set be True, it will raise the error when execution was
-                failed.
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+
+        Returns:
+            Result: An empty result.
         """
         from .engine.spark import SparkSubmit
 
-        ts: float = time.monotonic()
-        start_date: datetime = get_dt_now()
-        context: Context = {
-            "author": self.c.model.author,
-            "owner": self.c.model.owner,
-            "parent_dir": self.c.model.parent_dir,
-        }
-        exception: Exception | None = None
-        exception_name: str | None = None
-        exception_traceback: str | None = None
-        run_result: bool = True
-        logger.info(f"Tool version: {__version__}")
-        logger.info("Start handle execution:")
-        logger.info(f"... Author: {self.c.model.author}")
-        logger.info(f"... Execute Start: {start_date:%Y-%m-%d %H:%M:%S}")
-        try:
-            with TemporaryDirectory(prefix="detool-") as tmp:
-                temp_path: Path = Path(tmp)
-                self.set_conf_files(temp_path)
-                self.set_conf_entrypoint(temp_path)
-                self.c.fetch(override=substitute_env_vars(self.c.data))
-                model: SparkSubmit = SparkSubmit.model_validate(self.c.data)
-                model.submit(context=context)
-        except Exception as e:
-            run_result = False
-            exception = e
-            exception_name = e.__class__.__name__
-            exception_traceback = traceback.format_exc()
-            logger.error(f"Execution catch error: {e.__class__.__name__}")
-            logger.error(f"Trackback: {exception_traceback}")
-        finally:
-            emit_context: DictData = context | {
-                "run_result": run_result,
-                "execution_time_ms": time.monotonic() - ts,
-                "execution_start_time": start_date,
-                "execution_end_time": get_dt_now(),
-                "exception_name": exception_name,
-                "exception_traceback": exception_traceback,
-            }
-            logging.error(json.dumps(emit_context, default=str, indent=2))
-            if allow_raise and exception:
-                raise exception
+        with TemporaryDirectory(prefix="tool-") as tmp:
+            temp_path: Path = Path(tmp)
+            self.set_conf_files(temp_path)
+            self.set_conf_entrypoint(temp_path)
+
+            # IMPORTANT: Recreate model before start handle execution.
+            #   We replace env var template before execution for secrete value.
+            self.c.fetch(override=substitute_env_vars(self.c.data))
+
+            model: SparkSubmit = SparkSubmit.model_validate(self.c.data)
+            model.submit(context=context)
 
         return Result()

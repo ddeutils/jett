@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Literal
 
-import duckdb
-from duckdb import DuckDBPyRelation
+import polars as pl
+from polars import DataFrame
 from pydantic import Field
 
 from .....__types import DictData
@@ -20,19 +20,17 @@ class LocalCSVFile(BaseSource):
     header: bool = Field(default=True)
     sample_records: int | None = 200
 
-    def load(
-        self, engine: DictData, **kwargs
-    ) -> tuple[DuckDBPyRelation, Shape]:
+    def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
         """Load CSV file to DuckDB Relation object."""
         file_format: str = Path(self.path).suffix
         if file_format not in (".csv",):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
-        df = duckdb.read_csv(
-            path_or_buffer=self.path,
+        df = pl.read_csv(
+            source=self.path,
             delimiter=self.delimiter,
-            header=self.header,
+            has_header=self.header,
             sample_size=self.sample_records,
         )
         return df, Shape.from_tuple(df.shape)
@@ -47,24 +45,14 @@ class LocalJsonFile(BaseSource):
     type: Literal["local"]
     file_format: Literal["json"]
     path: str
-    format: Literal["newline_delimited", "array"] = "newline_delimited"
 
-    def load(
-        self, engine: DictData, **kwargs
-    ) -> tuple[DuckDBPyRelation, Shape]:
+    def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
         file_format: str = Path(self.path).suffix
         if file_format not in (".json",):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
-        # df = duckdb.sql(
-        #     f"""SELECT * FROM read_json_objects(
-        #         '{self.path}'
-        #         , format = '{self.format}'
-        #     ) AS original_data
-        #     """
-        # )
-        df = duckdb.read_json(path_or_buffer=self.path, format=self.format)
+        df: DataFrame = pl.read_json(source=self.path)
         return df, Shape.from_tuple(df.shape)
 
     def inlet(self) -> tuple[str, str]:

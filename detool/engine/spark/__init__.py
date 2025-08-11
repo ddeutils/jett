@@ -11,7 +11,14 @@ from typing_extensions import Self
 
 from ...__about__ import __version__
 from ...__types import DictData, PrimitiveType
-from ...models import ColDetail, Context, MetricEngine, Result, SubMetric
+from ...models import (
+    ColDetail,
+    Context,
+    MetricEngine,
+    MetricOperatorTransform,
+    MetricTransform,
+    Result,
+)
 from ...utils import exec_command, regex_by_group, sort_list_str_non_sensitive
 from ..__abc import BaseEngine
 from .__types import AnyDataFrame, AnySparkSession, PairCol
@@ -155,7 +162,9 @@ class Spark(BaseEngine):
             "temp_storage": {},
         }
 
-    def execute(self, context: Context, engine: DictData) -> DataFrame:
+    def execute(
+        self, context: Context, engine: DictData, metric: MetricEngine
+    ) -> DataFrame:
         """Execute Spark engine method. This method do procedure process to load
         data from source and save it to the sink model.
 
@@ -173,13 +182,20 @@ class Spark(BaseEngine):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricEngine): A metric engine that was set from handler
+                step for passing custom metric data.
 
         Returns:
             DataFrame: A result DataFrame API.
         """
-        logger.info("Start execute with Spark engine.")
+        logger.info("🏗️ Start execute with Spark engine.")
+        # NOTE: Start run source handler.
         df: DataFrame = self.source.handle_load(context, engine=engine)
+
+        # NOTE: Start run transform handler.
         df: DataFrame = self.handle_apply(df, context, engine=engine)
+
+        # NOTE: Start run sink handler.
         self.sink.handle_save(df, context, engine=engine)
         return df
 
@@ -238,7 +254,7 @@ class Spark(BaseEngine):
                 from execution method. It will be None value if it completes
                 without raise any exception.
         """
-        logger.info("🎢 Start Post Spark execution ...")
+        logger.info("🎢 Start Post Spark Execution ...")
         tmp_st: dict[str, TempStorage | None] = engine["temp_storage"]
 
         # NOTE: Clear source temp storage.
@@ -256,9 +272,9 @@ class Spark(BaseEngine):
     def apply(
         self,
         df: DataFrame,
-        context: DictData,
-        *,
+        context: Context,
         engine: DictData,
+        metric: MetricTransform,
         **kwargs,
     ) -> DataFrame:
         """Apply Spark engine transformation to the source this method will
@@ -280,6 +296,8 @@ class Spark(BaseEngine):
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
+            metric (MetricTransform): A metric transform that was set from
+                handler step for passing custom metric data.
         """
         spark: SparkSession = engine["spark"]
         priority: list[Transform] = []
@@ -298,14 +316,12 @@ class Spark(BaseEngine):
         logger.info(f"⚙️ Priority transform count: {len(priority)}")
         for t in priority:
             logger.info(f"Start priority operator: {t.op!r}")
-            pre_schema = df.schema
             df: DataFrame = t.handle_apply(
                 df,
                 context=context,
                 engine=engine,
                 spark=spark,
             )
-            self.log_trans(pre_schema, df.schema, context=context, spark=spark)
 
         logger.info(f"⚙️ Group transform count: {len(groups)}")
         if groups:
@@ -323,50 +339,41 @@ class Spark(BaseEngine):
                     logger.info(f"... target col: {k}, from: {v}")
                 pre_schema: StructType = df.schema
                 df: DataFrame = df.withColumns(maps)
-                self.log_trans(
-                    pre=pre_schema,
-                    post=df.schema,
-                    context=context,
-                    spark=spark,
-                    is_group=True,
+                self.sync_schema_group(
+                    pre_schema, df.schema, context=context, spark=spark
                 )
 
         logger.info(f"⚙️ Fallback transform count: {len(fallback)}")
         for t in fallback:
             logger.info(f"Start fallback operator: {t.op!r}")
-            pre_schema: StructType = df.schema
             df: DataFrame = t.handle_apply(
                 df,
                 context,
                 engine=engine,
                 spark=spark,
             )
-            self.log_trans(pre_schema, df.schema, context=context, spark=spark)
 
         return df
 
     @staticmethod
-    def log_trans(
-        pre,
-        post,
+    def sync_schema_group(
+        pre: StructType,
+        post: StructType,
         *,
-        context: DictData,
+        context: Context,
         spark: SparkSession | None = None,
-        is_group: bool = False,
     ) -> None:
         """Update pre- and post-schema metrics data for any transform that apply
         to the source DataFrame API until it save to the sink.
 
         Args:
-            pre: A pre-transform StructType object.
-            post: A post-transform StructType object.
+            pre (StructType): A pre-transform StructType object.
+            post (StructType): A post-transform StructType object.
             context (Context): A execution context that was created from the
                 core operator execution step this context will keep all operator
                 metadata and metric data before emit them to metric config
                 model.
             spark (SparkSession, default None): A Spark session.
-            is_group (bool, default False): A flag that enable group logging or
-                not.
         """
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema
         post_schema = spark.createDataFrame(data=[], schema=post).schema
@@ -376,11 +383,7 @@ class Spark(BaseEngine):
         post_no_array = sort_list_str_non_sensitive(
             extract_columns_without_array(schema=post_schema)
         )
-        if is_group:
-            metric: SubMetric = context["metric_group_transform"]
-        else:
-            # NOTE: Pop the latest updated sub transform metric.
-            metric: SubMetric = context["metric_operator"].pop()
+        metric: MetricOperatorTransform = context["metric_group_transform"]
 
         # NOTE: Start update the pre- and post-schema metric.
         metric.transform_pre = {
@@ -572,7 +575,9 @@ class SparkSubmit(Spark):
             "Spark Submit Engine does not support apply transform."
         )
 
-    def execute(self, context: Context, *, engine: DictData) -> DataFrame:
+    def execute(
+        self, context: Context, engine: DictData, metric: MetricEngine
+    ) -> DataFrame:
         logger.info("Start execute with Spark Submit engine.")
         raise NotImplementedError(
             "Spark Submit Engine does not support direct execute yet."
