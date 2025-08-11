@@ -32,7 +32,7 @@ from ..utils import (
     replace_all_occurrences,
 )
 from .__abc import AnyApplyOutput, BaseSparkTransform, PairCol
-from .__models import RenameCol
+from .__models import RenameColMap
 
 logger = logging.getLogger("detool")
 
@@ -219,7 +219,9 @@ class RenameColumns(BaseSparkTransform):
     """Rename Columns Transform model."""
 
     op: Literal["rename_columns"]
-    columns: list[RenameCol] = Field(description="A list of RenameCol model.")
+    columns: list[RenameColMap] = Field(
+        description="A list of RenameColMap model."
+    )
     allow_fill_null_when_col_not_exist: bool = False
 
     @model_validator(mode="after")

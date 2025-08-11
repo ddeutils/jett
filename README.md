@@ -47,23 +47,27 @@ type: spark
 name: Load CSV to GGSheet
 app_name: load_csv_to_ggsheet
 master: local
+
 # 1) 🚰 Load data from source
 source:
   type: local
   file_format: csv
   path: ./assets/data/customer.csv
+
 # 2) ⚙️ Transform this data.
-transform:
+transforms:
   - op: rename_to_snakecase
   - op: group
-    transform:
+    transforms:
       - op: expr
         value: "CAST(id AS string)"
+
 # 3) 🎯 Sink result to target
 sink:
   type: local
   file_type: google_sheet
   path: ./assets/landing/customer.gsheet
+
 # 4) 📩 Metric that will send after execution.
 metric:
   - type: console
@@ -81,7 +85,7 @@ tool = Tool(path="./etl.spark.tool")
 tool.execute(allow_raise=True)
 ```
 
-## 📖 Document
+## 📖 Documents
 
 This project will reference emoji from the [Pipeline Emojis](https://emojidb.org/pipeline-emojis).
 

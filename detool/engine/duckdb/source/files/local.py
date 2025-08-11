@@ -6,7 +6,7 @@ from duckdb import DuckDBPyRelation
 from pydantic import Field
 
 from .....__types import DictData
-from .....models import Shape
+from .....models import MetricSource, Shape
 from ....__abc import BaseSource
 
 
@@ -21,7 +21,7 @@ class LocalCSVFile(BaseSource):
     sample_records: int | None = 200
 
     def load(
-        self, engine: DictData, **kwargs
+        self, engine: DictData, metric: MetricSource, **kwargs
     ) -> tuple[DuckDBPyRelation, Shape]:
         """Load CSV file to DuckDB Relation object."""
         file_format: str = Path(self.path).suffix
@@ -50,7 +50,7 @@ class LocalJsonFile(BaseSource):
     format: Literal["newline_delimited", "array"] = "newline_delimited"
 
     def load(
-        self, engine: DictData, **kwargs
+        self, engine: DictData, metric: MetricSource, **kwargs
     ) -> tuple[DuckDBPyRelation, Shape]:
         file_format: str = Path(self.path).suffix
         if file_format not in (".json",):

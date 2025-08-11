@@ -8,7 +8,7 @@ from duckdb.experimental.spark.sql import SparkSession
 from pydantic import Field
 
 from ...__types import DictData
-from ...models import ColDetail, Context, Result
+from ...models import ColDetail, Context, MetricEngine, MetricTransform, Result
 from ..__abc import BaseEngine
 from .sink import Sink
 from .source import Source
@@ -34,7 +34,9 @@ class DuckDB(BaseEngine):
             "spark": SparkSession.builder.getOrCreate(),
         }
 
-    def execute(self, context: Context, engine: DictData) -> Any:
+    def execute(
+        self, context: Context, engine: DictData, metric: MetricEngine
+    ) -> Any:
         """Execute the DuckDB engine.
 
         Returns:
@@ -67,6 +69,7 @@ class DuckDB(BaseEngine):
         df: Relation,
         context: DictData,
         engine: DictData,
+        metric: MetricTransform,
         **kwargs,
     ) -> Relation:
         """Apply transform to the source.
@@ -75,6 +78,7 @@ class DuckDB(BaseEngine):
             df: Relation
             context: DictData
             engine:
+            metric:
         """
         priority: ListTransform = []
         groups: ListTransform = []

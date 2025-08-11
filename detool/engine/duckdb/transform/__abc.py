@@ -45,6 +45,7 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         self,
         df: Relation | DataFrame,
         engine: DictData,
+        metric: MetricOperator,
         spark: SparkSession | None = None,
         **kwargs,
     ) -> str | tuple[str, str]:
@@ -67,7 +68,7 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         metric = MetricOperator(type="order", trans_op=self.op)
         logger.info(f"🔨 Handle Apply Group Operator: {self.op!r}")
         output: PairCol | list[PairCol] = self.apply_group(
-            df, engine, spark=spark, **kwargs
+            df, engine, spark=spark, metric=metric, **kwargs
         )
         if is_pair_col(output):
             rs: dict[str, Column] = {output[1]: output[2]}

@@ -21,7 +21,8 @@ from ...__abc import BaseTransform
 from ..__types import AnyDataFrame, PairCol
 from ..utils import extract_columns_without_array, schema2dict
 
-AnyApplyOutput = PairCol | list[PairCol] | AnyDataFrame
+AnyApplyGroupOutput = PairCol | list[PairCol]
+AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
 
 logger = logging.getLogger("detool")
 
@@ -94,7 +95,7 @@ class BaseSparkTransform(BaseTransform, ABC):
         *,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> PairCol | list[PairCol]:
+    ) -> AnyApplyGroupOutput:
         """Apply group transform method that is optional apply for supported
         group transform model.
 
@@ -107,6 +108,11 @@ class BaseSparkTransform(BaseTransform, ABC):
             metric (MetricOperator): A metric transform that was set from
                 handler step for passing custom metric data.
             spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            AnyApplyGroupOutput: An any applied group output that can be
+                - A pair of Column and alias name.
+                - A list of pair Column.
         """
         raise NotImplementedError(
             f"Transform: {self.__class__.__name__} on Spark engine does not "
@@ -238,6 +244,7 @@ class BaseSparkTransform(BaseTransform, ABC):
         metric: MetricOperatorTransform,
         spark: SparkSession | None = None,
     ) -> None:
+        """Sync schema change to the metric transform."""
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema
         post_schema = spark.createDataFrame(data=[], schema=post).schema
         pre_no_array = sort_list_str_non_sensitive(

@@ -18,7 +18,7 @@ from .__abc import PairCol
 logger = logging.getLogger("detool")
 
 
-class ColumnMap(BaseModel):
+class ColMap(BaseModel):
     """Column Map model."""
 
     name: str = Field(description="A new column name.")
@@ -40,8 +40,8 @@ class ColumnMap(BaseModel):
         return column, self.name
 
 
-class RenameCol(ColumnMap):
-    """Rename Column"""
+class RenameColMap(ColMap):
+    """Rename Column Map model."""
 
     def get_rename_pair(self) -> PairCol:
         column: Column = (

@@ -24,6 +24,7 @@ filter_updated_and_created: partial[dict[str, Any]] = partial(
 
 
 def get_spark_session(test_path: Path | None = None) -> SparkSession:
+    """Get Spark Session for testing."""
     jars_path: str = f"{(test_path or Path('.')).absolute()}/.jars"
 
     # jars_url = [
