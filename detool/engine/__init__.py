@@ -2,18 +2,17 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
-# from .arrow import Arrow
+from .dbt import Dbt
 from .duckdb import DuckDB
-
-# from .polars import Polars
+from .polars import Polars
 from .spark import Spark
 
 Engine = Annotated[
     Union[
-        # Arrow,
-        # Polars,
+        Polars,
         DuckDB,
         Spark,
+        Dbt,
     ],
     Field(
         discriminator="type",

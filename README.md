@@ -30,12 +30,14 @@ uv pip install -U detool
 
 **Engine Supported**:
 
-| Name    | Status | Description                   |
-|---------|:------:|-------------------------------|
-| Pyspark |   ✅    | Pyspark and Spark submit CLI. |
-| DuckDB  |   ✅    | DuckDB and Spark API DuckDB   |
-| Arrow   |   ❌    |                               |
-| Polars  |   ❌    |                               |
+| Name    | Status | Description                                           |
+|---------|:------:|-------------------------------------------------------|
+| Pyspark |   ✅    | Pyspark and Spark submit CLI for distributed workload |
+| DuckDB  |   ✅    | DuckDB and Spark API DuckDB                           |
+| Polars  |   ✅    | Polars for Python workload                            |
+| Arrow   |   ❌    |                                                       |
+| Daft    |   ❌    |                                                       |
+| DBT     |   ❌    | DBT for SQL workload                                  |
 
 ## 📝 Usage
 

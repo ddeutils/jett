@@ -18,7 +18,7 @@ from .__models import ColumnMap
 logger = logging.getLogger("detool")
 
 
-class SQLExecute(BaseDuckDBTransform):
+class Sql(BaseDuckDBTransform):
     """SQL Transform model."""
 
     op: Literal["sql"]
@@ -34,6 +34,11 @@ class SQLExecute(BaseDuckDBTransform):
         """
         if not self.sql and not self.sql_file:
             raise ValueError("SQL and SQL file should not be empty together.")
+        elif self.sql and self.sql_file:
+            logger.warning(
+                "If pass SQL statement and SQL file location together, it will "
+                "use SQL statement first."
+            )
         return self
 
     def apply(

@@ -9,7 +9,7 @@ from pyspark.sql.functions import (
 )
 
 from ..utils import (
-    extract_selectable_columns,
+    extract_cols_selectable,
     has_fix_array_index,
     replace_fix_array_index_with_x_index,
 )
@@ -57,7 +57,7 @@ class RenameColMap(ColMap):
     def get_rename_pair_fix_non_existed_by_null(self, df: DataFrame) -> PairCol:
         _rename_cache_select_cols: list[str] | None = None
         if not _rename_cache_select_cols:
-            _rename_cache_select_cols = extract_selectable_columns(df.schema)
+            _rename_cache_select_cols = extract_cols_selectable(df.schema)
 
         rep_from_col: str = self.source
         if has_fix_array_index(rep_from_col):

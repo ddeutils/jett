@@ -29,6 +29,12 @@ ALLOW_VALIDATE_PATTERNS: Final[tuple[str, ...]] = (
 def schema2dict(
     schema: StructType, sorted_by_name: bool = False
 ) -> list[dict[str, str]]:
+    """Convert StructType object to dict that include keys, `name` and `dtype`.
+
+    Args:
+        schema:
+        sorted_by_name:
+    """
     rs: list[dict[str, str]] = [
         {"name": c.name, "dtype": c.dataType.simpleString()} for c in schema
     ]
@@ -110,58 +116,71 @@ def replace_fix_array_index_with_x_index(input_str: str) -> str:
     """Replace any existing string like `[{number}]` with [x]
 
     Examples:
-        input: items[0].detail[322].name
-        output: items[x].detail[x].name
+        input:
+            >>> "items[0].detail[322].name"
+        output:
+            >>> "items[x].detail[x].name"
     """
     return re.sub(r"\[\d+]", "[x]", input_str)
 
 
-def extract_selectable_columns(
-    schema: StructType, prefix: str = ""
-) -> list[str]:
+def extract_cols_selectable(schema: StructType, prefix: str = "") -> list[str]:
     """Extracts all selectable columns of given schema, support all top level
     column and nested column and array column.
 
     Returns:
-        list[str]: All cols like, ["c1", "c2.f1", "c2.f2", "c3"]
+        list[str]: All cols like:
+            ["c1", "c2.f1", "c2.f2", "c3"]
 
     Examples:
-        input: StructType(
-            [
-                StructField("texts, ArrayType(StringType())),
-                StructField("items", ArrayType(StructType(
-                    [
-                        StructField("name", StringType()),
-                        StructField("price", IntegerType()),
-                        StructField("detail", ArrayType(StructType(
-                            [
-                                StructField("field1", StringType()),
-                                StructField("field2", DoubleType()),
-                            ]
-                        )))
-                    ]
-                )))
-            ]
-        )
-        output: [
-            'texts', 'texts[x]', 'items', 'items[x]', 'items[x].name',
-            'items[x].price', 'items[x].detail', 'items[x].detail[x]',
-            'items[x].detail[x].field1', 'items[x].detail[x].field2'
-        ]
+        Input:
+        >>> from pyspark.sql.types import StringType, IntegerType, DoubleType
+        >>> StructType(
+        ...     [
+        ...         StructField("texts", ArrayType(StringType())),
+        ...         StructField("items", ArrayType(StructType(
+        ...             [
+        ...                 StructField("name", StringType()),
+        ...                 StructField("price", IntegerType()),
+        ...                 StructField("detail", ArrayType(StructType(
+        ...                     [
+        ...                         StructField("field1", StringType()),
+        ...                         StructField("field2", DoubleType()),
+        ...                     ]
+        ...                 )))
+        ...             ]
+        ...         )))
+        ...     ]
+        ... )
+
+        Output:
+        >>> [
+        ...     'texts',
+        ...     'texts[x]',
+        ...     'items',
+        ...     'items[x]',
+        ...     'items[x].name',
+        ...     'items[x].price',
+        ...     'items[x].detail',
+        ...     'items[x].detail[x]',
+        ...     'items[x].detail[x].field1',
+        ...     'items[x].detail[x].field2',
+        ... ]
     """
     rs: list[str] = []
-    for f in schema:
-        rs.append(prefix + f.name)
-        if isinstance(f.dataType, StructType):
+    for field in schema:
+        rs.append(prefix + field.name)
+        field_type = field.dataType
+        if isinstance(field_type, StructType):
             rs.extend(
-                extract_selectable_columns(f.dataType, prefix + f.name + ".")
+                extract_cols_selectable(field_type, f"{prefix}{field.name}.")
             )
-        elif isinstance(f.dataType, ArrayType):
-            rs.append(prefix + f.name + "[x]")
-            if isinstance(f.dataType.elementType, StructType):
+        elif isinstance(field_type, ArrayType):
+            rs.append(prefix + field.name + "[x]")
+            if isinstance(field_type.elementType, StructType):
                 rs.extend(
-                    extract_selectable_columns(
-                        f.dataType.elementType, prefix + f.name + "[x]" + "."
+                    extract_cols_selectable(
+                        field_type.elementType, f"{prefix}{field.name}[x]."
                     )
                 )
     return rs
@@ -191,30 +210,34 @@ def is_database_exist(
     return spark.catalog.databaseExists(dbName=database)
 
 
-def extract_columns_without_array(schema: StructType) -> list[str]:
-    """Extract selectable columns without array type. it returns only list
-    of selectable columns that are not nested array type return only root
-    array column name
+def extract_cols_without_array(schema: StructType) -> list[str]:
+    """Extract selectable columns without array type.
+
+        It returns only list of selectable columns that are not nested array
+    type return only root array column name.
+
+    Args:
+        schema (StructType):
+
+    Returns:
+        list[str]: A list of column name that extract by selectable without
+            array type.
     """
-    selectable_columns = extract_selectable_columns(schema=schema)
-    nested_array_cols = [
-        column for column in selectable_columns if "[x]" in column
-    ]
-    final_selectable_cols = [
-        column
-        for column in selectable_columns
-        if column not in nested_array_cols
+    selectable_cols: list[str] = extract_cols_selectable(schema=schema)
+    nested_array_cols: list[str] = [c for c in selectable_cols if "[x]" in c]
+    final_selectable_cols: list[str] = [
+        c for c in selectable_cols if c not in nested_array_cols
     ]
 
     rs: list[str] = []
-    for column in final_selectable_cols:
-        is_not_parent_column = True
+    for c in final_selectable_cols:
+        is_not_parent_column: bool = True
         for _column in final_selectable_cols:
-            if _column != column and _column.startswith(f"{column}."):
-                is_not_parent_column = False
+            if _column != c and _column.startswith(f"{c}."):
+                is_not_parent_column: bool = False
 
         if is_not_parent_column:
-            rs.append(column)
+            rs.append(c)
     return rs
 
 
@@ -232,7 +255,7 @@ def extract_col_with_pattern(
         col_name: str,
         p_cols: list[str],
         e_cols: list[str],
-        patterns: list[str],
+        pt: list[str],
     ) -> list[str]:
         """Child Wrapped function for extract_pyspark_column_names_with_pattern
         validate snake case or whitespace and append error columns
@@ -241,10 +264,10 @@ def extract_col_with_pattern(
             col_name:
             p_cols: A parent columns
             e_cols: An error columns
-            patterns:
+            pt:
         """
         is_found_err: bool = False
-        for pattern in patterns:
+        for pattern in pt:
             if pattern == "non_snake_case" and not is_snake_case(col_name):
                 is_found_err = True
             elif pattern == "whitespace" and " " in col_name:
@@ -282,7 +305,7 @@ def extract_col_with_pattern(
                     col_name=column.name,
                     p_cols=parent_cols,
                     e_cols=error_cols,
-                    patterns=patterns,
+                    pt=patterns,
                 )
         elif isinstance(column.dataType, StructType):
             _parent_cols = copy.deepcopy(parent_cols)
@@ -297,7 +320,7 @@ def extract_col_with_pattern(
                 col_name=column.name,
                 p_cols=parent_cols,
                 e_cols=error_cols,
-                patterns=patterns,
+                pt=patterns,
             )
     return error_cols
 
@@ -361,13 +384,19 @@ def is_root_level_column_primitive_type(
 
 
 def _extract_selectable_plan_with_auto_explode(
-    schema: StructType,
+    schema: DataType,
     columns: list[str],
     select_columns: list[str] | None = None,
     plans: list[dict] | None = None,
 ) -> list[dict]:
     """A child function for method `select_with_auto_explode`
-    extract the plan of select and explode based on the given schema
+    extract the plan of select and explode based on the given schema.
+
+    Args:
+        schema (DataType):
+        columns (list[str]):
+        select_columns:
+        plans:
     """
     select_columns: list[str] = select_columns or []
     plans: list[dict] = plans or []
@@ -496,7 +525,8 @@ def _child_remove_column_from_struct(
                 break
         if index is None:
             raise ValueError(
-                f"field {current_column} not found in current schema {schema_dict}"
+                f"field {current_column} not found in current schema "
+                f"{schema_dict}"
             )
 
         if (
@@ -505,7 +535,8 @@ def _child_remove_column_from_struct(
             and columns[0] != ENUM_EXTRACT_ARRAY_TYPE
         ):
             raise ValueError(
-                f"schema mismatch, found array schema but parent fieldname {columns[0]} is not {ENUM_EXTRACT_ARRAY_TYPE}"
+                f"schema mismatch, found array schema but parent field name "
+                f"{columns[0]} is not {ENUM_EXTRACT_ARRAY_TYPE}"
             )
 
         schema_dict["fields"][index]["type"] = _child_remove_column_from_struct(
@@ -660,10 +691,12 @@ def is_timestamp_column(column_name: str, schema: StructType) -> bool:
 
 
 def get_first_level_column_exclude_nested_struct(df: DataFrame) -> list[str]:
+    """Get a list of first column level that does not have nested struct.
+
+    Args:
+        df (DataFrame): A Spark DataFrame.
     """
-    get list of first column level that does not have nested struct
-    """
-    columns = []
+    columns: list[str] = []
     for c in df.schema:
         _s = c.simpleString().split(":")
         if "struct" not in _s[1]:

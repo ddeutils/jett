@@ -16,10 +16,10 @@ from ....models import (
     MetricOperatorOrder,
     MetricOperatorTransform,
 )
-from ....utils import sort_list_str_non_sensitive
+from ....utils import sort_non_sensitive_str
 from ...__abc import BaseTransform
 from ..__types import AnyDataFrame, PairCol
-from ..utils import extract_columns_without_array, schema2dict
+from ..utils import extract_cols_without_array, schema2dict
 
 AnyApplyGroupOutput = PairCol | list[PairCol]
 AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
@@ -27,11 +27,11 @@ AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
 logger = logging.getLogger("detool")
 
 
-def is_pair_col(value: PairCol | Any) -> bool:
+def is_pair_col(value: Any) -> bool:
     """Change value is a pair of Column and string.
 
     Args:
-        value (PairCol | Any): A pair of Column and its name or any value.
+        value (Any): A pair of Column and its name or any value.
 
     Returns:
         bool: True if an input value is a pair of Column and alias.
@@ -82,9 +82,9 @@ class BaseSparkTransform(BaseTransform, ABC):
 
         Returns:
             AnyApplyOutput: An any applied output that can be
-                - A pair of Column and alias name.
-                - A list of pair Column.
-                - A DataFrame object.
+                - PairCol: A pair of Column and its alias name.
+                - list[PairCol]: A list of pair Column.
+                - DataFrame: A Spark DataFrame.
         """
 
     def apply_group(
@@ -111,8 +111,8 @@ class BaseSparkTransform(BaseTransform, ABC):
 
         Returns:
             AnyApplyGroupOutput: An any applied group output that can be
-                - A pair of Column and alias name.
-                - A list of pair Column.
+                - PairCol: A pair of Column and its alias name.
+                - list[PairCol]: A list of pair Column.
         """
         raise NotImplementedError(
             f"Transform: {self.__class__.__name__} on Spark engine does not "
@@ -154,7 +154,7 @@ class BaseSparkTransform(BaseTransform, ABC):
                 df, engine, metric=metric, spark=spark, **kwargs
             )
             if is_pair_col(output):
-                rs: dict[str, Column] = {output[1]: output[2]}
+                rs: dict[str, Column] = {output[1]: output[0]}
             elif isinstance(output, list) and all(
                 is_pair_col(i) for i in output
             ):
@@ -231,6 +231,8 @@ class BaseSparkTransform(BaseTransform, ABC):
                     f"🏭 Cache the DataFrame after apply operator: {self.op!r}"
                 )
                 df.cache()
+
+            # NOTE: Sync schema before return.
             self.sync_schema(pre_schema, df.schema, metric=metric, spark=spark)
             return df
         finally:
@@ -244,14 +246,21 @@ class BaseSparkTransform(BaseTransform, ABC):
         metric: MetricOperatorTransform,
         spark: SparkSession | None = None,
     ) -> None:
-        """Sync schema change to the metric transform."""
+        """Sync schema change to the metric transform.
+
+        Args:
+            pre (StructType):
+            post (StructType):
+            metric (MetricOperatorTransform):
+            spark (SparkSession, default None): A Spark session.
+        """
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema
         post_schema = spark.createDataFrame(data=[], schema=post).schema
-        pre_no_array = sort_list_str_non_sensitive(
-            extract_columns_without_array(schema=pre_schema)
+        pre_no_array = sort_non_sensitive_str(
+            extract_cols_without_array(schema=pre_schema)
         )
-        post_no_array = sort_list_str_non_sensitive(
-            extract_columns_without_array(schema=post_schema)
+        post_no_array = sort_non_sensitive_str(
+            extract_cols_without_array(schema=post_schema)
         )
         # NOTE: Start update the pre- and post-schema metric.
         metric.transform_pre = {

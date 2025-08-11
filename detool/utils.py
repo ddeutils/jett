@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterator
 from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
+from re import Pattern
 from textwrap import dedent
 from typing import Any
 
@@ -114,8 +115,9 @@ def to_snake_case(name: str) -> str:
         - 'struct<ACTUAL_TIMESTAMP:timestamp>' -> 'struct<actual_timestamp:timestamp>'
     """
 
-    # Handle struct-like syntax by processing field names within angle brackets
-    def convert_struct_fields(match):
+    # NOTE: Handle struct-like syntax by processing field names within angle
+    #   brackets
+    def convert_struct_fields(match) -> str:
         struct_content = match.group(1)
         # Split by comma to handle individual fields
         fields = struct_content.split(",")
@@ -134,13 +136,13 @@ def to_snake_case(name: str) -> str:
 
         return f"struct<{','.join(converted_fields)}>"
 
-    # Check if this is a struct-like pattern
+    # NOTE: Check if this is a struct-like pattern
     struct_pattern = re.compile(r"struct<([^>]+)>")
     if struct_pattern.search(name):
         return struct_pattern.sub(convert_struct_fields, name)
-    else:
-        # Use original logic for simple strings
-        return char_to_snake_case(name)
+
+    # NOTE: Use original logic for simple strings
+    return char_to_snake_case(name)
 
 
 def is_snake_case(input_str: str) -> bool:
@@ -304,16 +306,10 @@ def get_random_str_unique(n: int = 10) -> str:
     return f"{get_random_str(n)}{get_dt_now():%Y%m%d%H%M%S}"
 
 
-def sort_list_str_non_sensitive(
-    string_list: list[str],
-) -> list[str]:
-    """sort list of string by ignoring special characters and case-sensitive"""
-    pattern = re.compile(r"[^a-zA-Z0-9]")
-
-    def rule(s):
-        return pattern.sub("", s).lower()
-
-    return sorted(string_list, key=rule)
+def sort_non_sensitive_str(value: list[str]) -> list[str]:
+    """Sort list of string by ignoring special characters and case-sensitive."""
+    pattern: Pattern[str] = re.compile(r"[^a-zA-Z0-9]")
+    return sorted(value, key=lambda s: pattern.sub("", s).lower())
 
 
 def dt2str(

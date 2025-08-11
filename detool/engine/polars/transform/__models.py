@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-class ColumnMap(BaseModel):
+class ColMap(BaseModel):
     """Column Map model."""
 
     name: str = Field(description="A new column name.")

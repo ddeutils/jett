@@ -7,12 +7,12 @@ from .functions import (
     ExcludeColumns,
     RenameColumns,
     RenameSnakeCase,
-    SQLExecute,
+    Sql,
 )
 
 Transform = Annotated[
     Union[
-        SQLExecute,
+        Sql,
         DropColumns,
         ExcludeColumns,
         RenameColumns,

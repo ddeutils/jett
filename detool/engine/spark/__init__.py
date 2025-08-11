@@ -19,7 +19,7 @@ from ...models import (
     MetricTransform,
     Result,
 )
-from ...utils import exec_command, regex_by_group, sort_list_str_non_sensitive
+from ...utils import exec_command, regex_by_group, sort_non_sensitive_str
 from ..__abc import BaseEngine
 from .__types import AnyDataFrame, AnySparkSession, PairCol
 from .schema_change import (
@@ -32,7 +32,7 @@ from .transform import Transform
 from .utils import (
     add_spark_cmd,
     clean_tz_for_extra_java_options,
-    extract_columns_without_array,
+    extract_cols_without_array,
     extract_spark_conf_keys,
     is_remote_session,
     schema2dict,
@@ -56,6 +56,15 @@ class Spark(BaseEngine):
 
     type: Literal["spark"]
     app_name: str | None = None
+    enable_collect_result: bool = False
+    source: Source = Field(description="A source model.")
+    sink: Sink = Field(description="A sink model.")
+    transforms: list[Transform] = Field(
+        default_factory=list,
+        description="A list of transform model.",
+    )
+
+    # NOTE: Spark configuration fields.
     master: str | None = None
     remote: str | None = None
     deploy_mode: Literal["cluster"] = "cluster"
@@ -68,18 +77,11 @@ class Spark(BaseEngine):
     executor_cores: int = 1
     num_executors: int = 2
     max_executors: int = 5
-    enable_collect_result: bool = False
     show_all_spark_submit_log: bool = False
     enable_hive_support: bool = False
     conf: dict[str, PrimitiveType | None] = Field(default_factory=dict)
 
     # NOTE: Main fields
-    source: Source = Field(description="A source model.")
-    sink: Sink = Field(description="A sink model.")
-    transforms: list[Transform] = Field(
-        default_factory=list,
-        description="A list of transform model.",
-    )
 
     def __validate_master_and_remote(self) -> None:
         """Validate master and remote fields.
@@ -277,14 +279,14 @@ class Spark(BaseEngine):
         metric: MetricTransform,
         **kwargs,
     ) -> DataFrame:
-        """Apply Spark engine transformation to the source this method will
-        apply all sub-apply from transform operators.
+        """Apply Spark engine transformation to the source. This method will
+        apply all operators by priority.
 
             The Spark engine apply the split sub-apply on transform operators
-        to 3 layers:
-            1. priority layer: An ordering transform before group transform
+        to 3 layers of priority:
+            1. pre layer: An ordering transform before group transform
             2. group layer: A group transform
-            3. fallback layer: A ordering transform after group transform
+            3. post layer: A ordering transform after group transform
 
         Args:
             df (DataFrame): A Spark DataFrame.
@@ -377,11 +379,11 @@ class Spark(BaseEngine):
         """
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema
         post_schema = spark.createDataFrame(data=[], schema=post).schema
-        pre_no_array = sort_list_str_non_sensitive(
-            extract_columns_without_array(schema=pre_schema)
+        pre_no_array = sort_non_sensitive_str(
+            extract_cols_without_array(schema=pre_schema)
         )
-        post_no_array = sort_list_str_non_sensitive(
-            extract_columns_without_array(schema=post_schema)
+        post_no_array = sort_non_sensitive_str(
+            extract_cols_without_array(schema=post_schema)
         )
         metric: MetricOperatorTransform = context["metric_group_transform"]
 

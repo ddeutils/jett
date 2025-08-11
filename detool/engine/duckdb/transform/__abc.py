@@ -48,7 +48,7 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         metric: MetricOperator,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> str | tuple[str, str]:
+    ) -> str | PairCol | list[PairCol]:
         """Apply group transform."""
         raise NotImplementedError(
             f"Transform: {self.__class__.__name__} on DuckDB engine does not "
@@ -67,7 +67,7 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         ts: float = time.monotonic()
         metric = MetricOperator(type="order", trans_op=self.op)
         logger.info(f"🔨 Handle Apply Group Operator: {self.op!r}")
-        output: PairCol | list[PairCol] = self.apply_group(
+        output: str | PairCol | list[PairCol] = self.apply_group(
             df, engine, spark=spark, metric=metric, **kwargs
         )
         if is_pair_col(output):
@@ -77,3 +77,6 @@ class BaseDuckDBTransform(BaseTransform, ABC):
         metric.transform_latency_ms = time.monotonic() - ts
         context["metric_group_transform"].transforms.append(metric)
         return rs
+
+    @staticmethod
+    def sync_schema(pre, post, metric, **kwargs) -> None: ...

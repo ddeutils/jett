@@ -2,13 +2,15 @@ import logging
 from typing import Any, Literal
 
 from polars import DataFrame
+from pydantic import Field
 from pydantic.functional_validators import field_validator
 
 from ...__types import DictData
-from ...models import Context, Result
+from ...models import ColDetail, Context, MetricEngine, MetricTransform, Result
 from ..__abc import BaseEngine
 from .sink import Sink
 from .source import Source
+from .transform import Transform
 
 logger = logging.getLogger("detool")
 
@@ -16,25 +18,48 @@ logger = logging.getLogger("detool")
 class Polars(BaseEngine):
     """Polars Engine model."""
 
-    type: Literal["polars"]
+    type: Literal["polars"] = Field(description="A type of engine.")
     source: Source
+    transforms: list[Transform] = Field(default_factory=list)
     sink: list[Sink]
 
     @field_validator(
-        "sink", mode="before", json_schema_input_type=Sink | list[Sink]
+        "sink",
+        mode="before",
+        json_schema_input_type=Sink | list[Sink],
     )
     def __prepare_sink(cls, data: Any) -> Any:
-        if isinstance(data, Sink):
-            return list[data]
-        return data
+        """Prepare the sink field value that should be list of Sink model."""
+        return [data] if not isinstance(data, list) else data
 
     def execute(
         self,
         context: Context,
         engine: DictData,
-    ) -> Any:
-        logger.info("Start execute with Spark engine.")
+        metric: MetricEngine,
+    ) -> DataFrame:
+        """Execute Polars engine method.
+
+        Args:
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            metric (MetricEngine): A metric engine that was set from handler
+                step for passing custom metric data.
+
+        Returns:
+            DataFrame:
+        """
+        logger.info("🏗️ Start execute with Polars engine.")
+        # NOTE: Start run source handler.
         df: DataFrame = self.source.handle_load(context, engine=engine)
+
+        # NOTE: Start run transform handler.
         df: DataFrame = self.handle_apply(df, context, engine=engine)
 
         # NOTE: Start multi-sink by sequential strategy.
@@ -45,16 +70,47 @@ class Polars(BaseEngine):
 
     def apply(
         self,
-        df: Any,
+        df: DataFrame,
         context: Context,
         engine: DictData,
+        metric: MetricTransform,
         **kwargs,
-    ) -> Any: ...
+    ) -> DataFrame:
+        """Apply Polars engine transformation to the source. This method
+        will apply all operators.
 
-    def set_result(self, df: Any, context: Context) -> Result: ...
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            metric (MetricTransform): A metric transform that was set from
+                handler step for passing custom metric data.
+        """
+        for t in self.transforms:
+            df: DataFrame = t.handle_apply(df, context, engine=engine)
+        return df
+
+    def set_result(self, df: DataFrame, context: Context) -> Result:
+        return Result(
+            data=[],
+            columns=[
+                ColDetail(column=name, dtype=str(dtype))
+                for name, dtype in df.schema.items()
+            ],
+            schema_dict=df.schema,
+        )
 
     def set_engine_context(self, context: Context, **kwargs) -> DictData:
-        """Set itself to engine context data."""
-        return {
-            "engine": self,
-        }
+        """Set Polars engine context. It will set itself to engine context data.
+
+        Returns:
+            A mapping of the engine context data:
+                - engine: Self
+        """
+        return {"engine": self}

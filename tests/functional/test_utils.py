@@ -9,7 +9,7 @@ from detool.utils import (
     handle_command,
     is_optional_engine,
     load_yaml,
-    sort_list_str_non_sensitive,
+    sort_non_sensitive_str,
     to_snake_case,
 )
 
@@ -72,7 +72,7 @@ def test_handle_command():
 
 
 def test_sort_list_str_non_sensitive():
-    assert list(sort_list_str_non_sensitive(["s b", "Fo/o", "G$11"])) == [
+    assert list(sort_non_sensitive_str(["s b", "Fo/o", "G$11"])) == [
         "Fo/o",
         "G$11",
         "s b",

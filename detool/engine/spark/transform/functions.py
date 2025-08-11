@@ -26,7 +26,7 @@ from ....__types import DictData
 from ....utils import get_dt_now, get_random_str_unique, to_snake_case
 from ..utils import (
     extract_col_with_pattern,
-    extract_columns_without_array,
+    extract_cols_without_array,
     is_remote_session,
     is_table_exist,
     replace_all_occurrences,
@@ -754,7 +754,7 @@ class FlattenAllExceptArray(BaseSparkTransform):
             DataFrame:
         """
         transform_dict: dict[str, Column] = {}
-        for c in extract_columns_without_array(schema=df.schema):
+        for c in extract_cols_without_array(schema=df.schema):
             flatten_col: str = "_".join(c.split("."))
             transform_dict[flatten_col] = col(c)
 

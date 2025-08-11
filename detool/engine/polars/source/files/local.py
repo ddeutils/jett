@@ -1,3 +1,5 @@
+"""Local File System source module."""
+
 from pathlib import Path
 from typing import Literal
 
@@ -11,10 +13,10 @@ from ....__abc import BaseSource
 
 
 class LocalCSVFile(BaseSource):
-    """Local CSV file data source."""
+    """Local file system with CSV file format source model."""
 
-    type: Literal["local"]
-    file_format: Literal["csv"]
+    type: Literal["local"] = Field(description="A type of source.")
+    file_format: Literal["csv"] = Field(description="A file format.")
     path: str
     delimiter: str = "|"
     header: bool = Field(default=True)
@@ -27,9 +29,9 @@ class LocalCSVFile(BaseSource):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
-        df = pl.read_csv(
+        df: DataFrame = pl.read_csv(
             source=self.path,
-            delimiter=self.delimiter,
+            separator=self.delimiter,
             has_header=self.header,
             sample_size=self.sample_records,
         )
@@ -43,7 +45,7 @@ class LocalJsonFile(BaseSource):
     """Local JSON file data source."""
 
     type: Literal["local"]
-    file_format: Literal["json"]
+    file_format: Literal["json", "ndjson"]
     path: str
 
     def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
@@ -52,7 +54,10 @@ class LocalJsonFile(BaseSource):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
-        df: DataFrame = pl.read_json(source=self.path)
+        if self.file_format == "ndjson":
+            df: DataFrame = pl.read_ndjson(source=self.path)
+        else:
+            df: DataFrame = pl.read_json(source=self.path)
         return df, Shape.from_tuple(df.shape)
 
     def inlet(self) -> tuple[str, str]:

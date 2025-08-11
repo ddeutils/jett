@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Literal
 
+import polars as pl
 from polars import DataFrame
 
 from ....__types import DictData
@@ -15,6 +16,7 @@ class Console(BaseSink):
 
     type: Literal["console"]
     limit: int = 10
+    max_width: int | None = None
 
     def save(
         self,
@@ -25,7 +27,8 @@ class Console(BaseSink):
     ) -> Any:
         """Save the result data to the Console."""
         logger.info("🎯 Sink - Start sync with console")
-        print(df.head(n=self.limit))
+        with pl.Config(set_tbl_width_chars=self.max_width):
+            print(df.head(n=self.limit))
         return df, Shape.from_tuple(df.shape)
 
     def outlet(self) -> tuple[str, str]:

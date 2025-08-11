@@ -4,15 +4,18 @@ from pydantic import Field
 
 from .files.local import LocalCSVFile, LocalJsonFile
 
-LocalFile = Annotated[
+# LocalFile = Annotated[
+#     Union[
+#         LocalCSVFile,
+#         LocalJsonFile,
+#     ],
+#     Field(discriminator="file_format"),
+# ]
+
+Source = Annotated[
     Union[
         LocalCSVFile,
         LocalJsonFile,
     ],
     Field(discriminator="file_format"),
-]
-
-Source = Annotated[
-    Union[LocalFile,],
-    Field(discriminator="type"),
 ]

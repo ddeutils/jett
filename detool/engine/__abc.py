@@ -525,6 +525,10 @@ class BaseTransform(BaseModel, ABC):
             return get_args(ant)
         raise TypeError(f"Does not support `op` override with type: {ant}")
 
+    @staticmethod
+    @abstractmethod
+    def sync_schema(pre, post, metric, **kwargs) -> None: ...
+
 
 class BaseSink(BaseModel, ABC):
     """Base Sink abstract model."""
