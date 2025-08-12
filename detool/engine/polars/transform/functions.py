@@ -18,7 +18,7 @@ from ...__abc import BaseEngine
 from ..utils import col_path, extract_cols_without_array
 from .__abc import AnyApplyOutput, BasePolarsTransform
 from .__models import ColMap
-from .__types import PairExpr
+from .__types import PairCol
 
 logger = logging.getLogger("detool")
 
@@ -77,7 +77,7 @@ class Expr(BasePolarsTransform):
         engine: DictData,
         metric: MetricOperatorOrder,
         **kwargs,
-    ) -> PairExpr:
+    ) -> PairCol:
         """Apply to Expr.
 
         Args:
@@ -90,7 +90,7 @@ class Expr(BasePolarsTransform):
                 handler step for passing custom metric data.
 
         Returns:
-            PairExpr: A pair of Expr object and its alias name.
+            PairCol: A pair of Expr object and its alias name.
         """
         return pl.sql_expr(self.query), self.name
 
@@ -104,7 +104,7 @@ class Sql(BasePolarsTransform):
     )
 
     @model_validator(mode="after")
-    def __check_sql(self) -> Self:
+    def __check_sql_and_sql_file(self) -> Self:
         """Check the necessary field of SQL use pass only SQL statement nor
         SQL filepath.
         """
@@ -158,7 +158,7 @@ class SelectColumns(BasePolarsTransform):
 class FlattenAllExceptArray(BasePolarsTransform):
     """Flatten all Columns except Array datatype Operator transform model."""
 
-    op: Literal["flatten_all_columns_except_array"]
+    op: Literal["flatten_all_except_array"]
 
     def apply(
         self,
@@ -166,7 +166,7 @@ class FlattenAllExceptArray(BasePolarsTransform):
         engine: DictData,
         **kwargs,
     ) -> DataFrame:
-        """Apply to Flatten all Columns.
+        """Apply to Flatten all Columns except Array or List data type.
 
         Args:
             df (Any): A Spark DataFrame.
@@ -178,12 +178,11 @@ class FlattenAllExceptArray(BasePolarsTransform):
         Returns:
             DataFrame: A Polars DataFrame that already
         """
-        transform_dict: dict[str, Column] = {}
+        selection: dict[str, Column] = {}
         for c in extract_cols_without_array(schema=df.schema):
-            flatten_col: str = "_".join(c.split("."))
-            transform_dict[flatten_col] = col_path(c)
+            selection["_".join(c.split("."))] = col_path(c)
 
         logger.info("Start Flatten all columns except array")
-        for k, v in transform_dict.items():
+        for k, v in selection.items():
             logger.info(f"> Target col: {k}, from: {v}")
-        return df.with_columns(**transform_dict).select(*transform_dict.keys())
+        return df.with_columns(**selection).select(*selection.keys())

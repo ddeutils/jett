@@ -11,10 +11,10 @@ source:
 transforms:
   - op: rename_snakecase
 
+  - op: flatten_all_except_array
+
   - op: sql
     sql_file: import_statement.polars.sql
-
-  - op: flatten_all_columns_except_array
 
 #  - op: sql
 #    sql: |

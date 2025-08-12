@@ -9,7 +9,7 @@ from ....__types import DictData
 from ....errors import ToolTransformError
 from ....models import Context, MetricOperatorGroup, MetricOperatorOrder
 from .__abc import BasePolarsTransform, is_pair_expr
-from .__types import PairExpr
+from .__types import PairCol
 from .functions import Expr as ExprTransform
 from .functions import (
     FlattenAllExceptArray,
@@ -52,13 +52,14 @@ class Group(BasePolarsTransform):
     #             and (rt := hints['return'])
     #             and (
     #                 isinstance(rt, DataFrame)
-    #                 # or (
-    #                 #     isinstance(rt, list)
-    #                 # )
+    #                 or (
+    #                     isinstance(rt, list)
+    #                     and any(isinstance(i, DataFrame) for i in rt)
+    #                 )
     #             )
     #         ):
     #             raise ValueError(
-    #                 "Group operator transform."
+    #                 f"Group operator transform does not support operator: {t}."
     #             )
     #     return data
 
@@ -88,7 +89,7 @@ class Group(BasePolarsTransform):
             metric_order = MetricOperatorOrder(type="order", trans_op=t.op)
             metric.transforms.append(metric_order)
             try:
-                output: PairExpr | list[PairExpr] | Any = t.apply(
+                output: PairCol | list[PairCol] | Any = t.apply(
                     df, engine=engine, metric=metric_order
                 )
 

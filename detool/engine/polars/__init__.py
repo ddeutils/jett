@@ -21,7 +21,7 @@ class Polars(BaseEngine):
     type: Literal["polars"] = Field(description="A type of engine.")
     source: Source
     transforms: list[Transform] = Field(default_factory=list)
-    sink: list[Sink]
+    sink: list[Sink] = Field(description="A list of Sink models.")
 
     @field_validator(
         "sink",
@@ -97,6 +97,15 @@ class Polars(BaseEngine):
         return df
 
     def set_result(self, df: DataFrame, context: Context) -> Result:
+        """Set the Result object from executed Polars DataFrame.
+
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            context (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+        """
         return Result(
             data=[],
             columns=[

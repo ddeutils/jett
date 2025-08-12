@@ -3,16 +3,17 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import polars as pl
-from polars import DataFrame, DataType, Expr, Schema
+from polars import DataFrame, DataType, Schema
+from polars import Expr as Column
 
 from ....__types import DictData
 from ....models import Context, MetricOperatorOrder, MetricOperatorTransform
 from ...__abc import BaseTransform
-from .__types import PairExpr
+from .__types import PairCol
 
 logger = logging.getLogger("detool")
 
-AnyApplyGroupOutput = PairExpr | list[PairExpr]
+AnyApplyGroupOutput = PairCol | list[PairCol]
 AnyApplyOutput = AnyApplyGroupOutput | DataFrame
 DTYPES: dict[str, type[DataType]] = {
     "string": pl.String,
@@ -23,11 +24,11 @@ DTYPES: dict[str, type[DataType]] = {
 }
 
 
-def is_pair_expr(value: PairExpr | Any) -> bool:
+def is_pair_expr(value: PairCol | Any) -> bool:
     """Change value is a pair of Column and string.
 
     Args:
-        value (PairExpr | Any): A pair of Column and its name or any value.
+        value (PairCol | Any): A pair of Column and its name or any value.
 
     Returns:
         bool: True if an input value is a pair of Column and alias.
@@ -35,7 +36,7 @@ def is_pair_expr(value: PairExpr | Any) -> bool:
     return (
         isinstance(value, tuple)
         and len(value) == 2
-        and isinstance(value[0], Expr)
+        and isinstance(value[0], Column)
         and isinstance(value[1], str)
     )
 
@@ -64,8 +65,8 @@ class BasePolarsTransform(BaseTransform, ABC):
 
         Returns:
             AnyApplyOutput: That able to be:
-                - PairExpr
-                - list[PairExpr]: A list of pair Expr and alias name.
+                - PairCol
+                - list[PairCol]: A list of pair Expr and alias name.
                 - DataFrame: A Polars DataFrame.
         """
 
