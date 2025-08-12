@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from ..sink import Sink
 
+from pydantic import Field
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import ArrayType, StructField
 
@@ -26,10 +27,10 @@ logger = logging.getLogger("detool")
 
 
 class CalculateMinMaxOfColumns(BaseSparkTransform):
-    """Calculate Min Max of Columns transform model."""
+    """Calculate Min Max of Columns operator transform model."""
 
     op: Literal["calculate_min_max_of_columns"]
-    columns: list[str]
+    columns: list[str] = Field()
 
     def apply(
         self,
@@ -121,7 +122,7 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
         **kwargs,
     ) -> AnyApplyOutput:
         """Detect schema change between DF and table schema."""
-        sql: str = "SELECT * FROM {db_name}.{table_name} LIMIT 0"
+        sql: str = "SELECT * FROM {database}.{table_name} LIMIT 0"
         logger.info("detect schema change with sink")
         if self.sink_type is not None:
             logger.info("use sink's configuration from model")
@@ -148,10 +149,9 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
                 "columns_to_alter": [],
             }
 
-        sql = sql.format(db_name=db_name, table_name=table_name)
-        table_schema = spark.sql(sql).schema
+        sql = sql.format(database=db_name, table_name=table_name)
         changes = evaluate_schema_change(
-            src_schema=df.schema, tgt_schema=table_schema
+            src_schema=df.schema, tgt_schema=spark.sql(sql).schema
         )
         columns_to_drop = []
         columns_to_add = []

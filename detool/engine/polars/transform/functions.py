@@ -1,9 +1,11 @@
+import json
 import logging
 from pathlib import Path
 from typing import Literal
 
 import polars as pl
 from polars import DataFrame
+from polars import Expr as Column
 from pydantic import Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import Self
@@ -13,6 +15,7 @@ from ....errors import ToolTransformError
 from ....models import MetricOperatorOrder
 from ....utils import to_snake_case
 from ...__abc import BaseEngine
+from ..utils import col_path, extract_cols_without_array
 from .__abc import AnyApplyOutput, BasePolarsTransform
 from .__models import ColMap
 from .__types import PairExpr
@@ -21,7 +24,11 @@ logger = logging.getLogger("detool")
 
 
 class RenameSnakeCase(BasePolarsTransform):
-    op: Literal["rename_snakecase"]
+    """Rename All columns to Snakecase operator transform model."""
+
+    op: Literal["rename_snakecase"] = Field(
+        description="An operator transform type.",
+    )
 
     def apply(
         self,
@@ -31,6 +38,10 @@ class RenameSnakeCase(BasePolarsTransform):
         **kwargs,
     ) -> DataFrame:
         rename_mapping = {col: to_snake_case(col) for col in df.columns}
+        logger.info(
+            f"Start Rename All columns to Snakecase:\n"
+            f"{json.dumps(rename_mapping, indent=1)}"
+        )
         return df.rename(rename_mapping)
 
 
@@ -86,8 +97,11 @@ class Expr(BasePolarsTransform):
 
 class Sql(BasePolarsTransform):
     op: Literal["sql"]
-    sql: str | None = Field(default=None)
-    sql_file: str | None = Field(default=None)
+    sql: str | None = Field(default=None, description="A SQL statement.")
+    sql_file: str | None = Field(
+        default=None,
+        description="A SQL file that want to load.",
+    )
 
     @model_validator(mode="after")
     def __check_sql(self) -> Self:
@@ -110,7 +124,7 @@ class Sql(BasePolarsTransform):
         metric: MetricOperatorOrder,
         **kwargs,
     ) -> DataFrame:
-        logger.info("Start SQL transform ...")
+        logger.info("Start Prepare SQL statement ...")
         if self.sql:
             sql: str = self.sql
         else:
@@ -122,6 +136,8 @@ class Sql(BasePolarsTransform):
                 raise ToolTransformError(
                     f"SQL file does not exists {sql_file.resolve()}"
                 ) from None
+        logger.info(f"SQL Statement:\n{sql}")
+        logger.info(f"{df.schema}")
         return df.sql(sql)
 
 
@@ -137,3 +153,37 @@ class SelectColumns(BasePolarsTransform):
         metric: MetricOperatorOrder,
         **kwargs,
     ) -> AnyApplyOutput: ...
+
+
+class FlattenAllExceptArray(BasePolarsTransform):
+    """Flatten all Columns except Array datatype Operator transform model."""
+
+    op: Literal["flatten_all_columns_except_array"]
+
+    def apply(
+        self,
+        df: DataFrame,
+        engine: DictData,
+        **kwargs,
+    ) -> DataFrame:
+        """Apply to Flatten all Columns.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+
+        Returns:
+            DataFrame: A Polars DataFrame that already
+        """
+        transform_dict: dict[str, Column] = {}
+        for c in extract_cols_without_array(schema=df.schema):
+            flatten_col: str = "_".join(c.split("."))
+            transform_dict[flatten_col] = col_path(c)
+
+        logger.info("Start Flatten all columns except array")
+        for k, v in transform_dict.items():
+            logger.info(f"> Target col: {k}, from: {v}")
+        return df.with_columns(**transform_dict).select(*transform_dict.keys())

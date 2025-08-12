@@ -14,7 +14,7 @@ logger = logging.getLogger("detool")
 
 AnyApplyGroupOutput = PairExpr | list[PairExpr]
 AnyApplyOutput = AnyApplyGroupOutput | DataFrame
-TYPES: dict[str, type[DataType]] = {
+DTYPES: dict[str, type[DataType]] = {
     "string": pl.String,
     "boolean": pl.Boolean,
     # "integer": ...,

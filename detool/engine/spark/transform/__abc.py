@@ -50,7 +50,9 @@ class BaseSparkTransform(BaseTransform, ABC):
     priority: Literal["pre", "group", "post"] = Field(
         default="pre",
         description=(
-            "A priority value for order transform operator before apply."
+            "A priority value for order transform operator before apply. "
+            "This field will deprecate in the future and move to use `group` "
+            "operator instead."
         ),
     )
     cache: bool = Field(
@@ -249,9 +251,10 @@ class BaseSparkTransform(BaseTransform, ABC):
         """Sync schema change to the metric transform.
 
         Args:
-            pre (StructType):
-            post (StructType):
-            metric (MetricOperatorTransform):
+            pre (StructType): A pre schema before apply.
+            post (StructType): A post schema that have applied.
+            metric (MetricOperatorTransform): An operator transform metric model
+                that want to update schema pre and post for tracking change.
             spark (SparkSession, default None): A Spark session.
         """
         pre_schema = spark.createDataFrame(data=[], schema=pre).schema

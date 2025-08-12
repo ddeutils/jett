@@ -1,14 +1,17 @@
 from typing import Literal
 
+from pydantic import Field
 from pyspark.sql import DataFrame, SparkSession
 
 from ....__types import DictData
 from ..utils import validate_col_disallow_pattern
-from .__abc import AnyApplyOutput, BaseSparkTransform
+from .__abc import BaseSparkTransform
 
 
 class ValidateColumnDisallowSpace(BaseSparkTransform):
-    op: Literal["validate_column_names_disallow_whitespace"]
+    op: Literal["validate_col_names_disallow_whitespace"] = Field(
+        description="An operator transform type."
+    )
 
     def apply(
         self,
@@ -17,6 +20,19 @@ class ValidateColumnDisallowSpace(BaseSparkTransform):
         *,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> AnyApplyOutput:
+    ) -> DataFrame:
+        """Apply to Validate Column name disallow whitespace.
+
+        Args:
+            df (Any): A Spark DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            spark (SparkSession, default None): A Spark session.
+
+        Returns:
+            DataFrame:
+        """
         validate_col_disallow_pattern(schema=df.schema, patterns=["whitespace"])
         return df

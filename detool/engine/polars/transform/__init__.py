@@ -12,6 +12,7 @@ from .__abc import BasePolarsTransform, is_pair_expr
 from .__types import PairExpr
 from .functions import Expr as ExprTransform
 from .functions import (
+    FlattenAllExceptArray,
     RenameColumns,
     RenameSnakeCase,
     Sql,
@@ -149,7 +150,8 @@ Transform = Annotated[
         RenameSnakeCase,
         RenameColumns,
         Sql,
-        Expr,
+        ExprTransform,
+        FlattenAllExceptArray,
     ],
     Field(discriminator="op"),
 ]

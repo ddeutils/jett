@@ -41,7 +41,9 @@ class ColMap(BaseModel):
 
 
 class RenameColMap(ColMap):
-    """Rename Column Map model."""
+    """Rename Column Map model. This model add useful methods that need to use
+    for rename.
+    """
 
     def get_rename_pair(self) -> PairCol:
         column: Column = (

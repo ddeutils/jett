@@ -11,6 +11,6 @@ def test_polars_csv_to_console(root_path: Path):
 
 
 def test_polars_json_to_console(root_path: Path):
-    op = Tool(path=root_path / "assets/example.spark.json.tool")
+    op = Tool(path=root_path / "assets/example.polars.json.tool")
     rs: Result = op.execute(allow_raise=True)
     print(rs.columns)
