@@ -10,13 +10,14 @@ from ....errors import ToolTransformError
 from ....models import Context, MetricOperatorGroup, MetricOperatorOrder
 from .__abc import BasePolarsTransform, is_pair_expr
 from .__types import PairCol
-from .functions import Expr as ExprTransform
 from .functions import (
+    ExplodeArrayColumn,
     FlattenAllExceptArray,
     RenameColumns,
     RenameSnakeCase,
     Sql,
 )
+from .functions import Expr as ExprTransform
 
 logger = logging.getLogger("detool")
 
@@ -148,6 +149,7 @@ class Group(BasePolarsTransform):
 
 Transform = Annotated[
     Union[
+        ExplodeArrayColumn,
         RenameSnakeCase,
         RenameColumns,
         Sql,

@@ -16,7 +16,7 @@ from ....models import MetricOperatorOrder
 from ....utils import to_snake_case
 from ...__abc import BaseEngine
 from ..utils import col_path, extract_cols_without_array
-from .__abc import AnyApplyOutput, BasePolarsTransform
+from .__abc import BasePolarsTransform
 from .__models import ColMap
 from .__types import PairCol
 
@@ -142,9 +142,41 @@ class Sql(BasePolarsTransform):
 
 
 class SelectColumns(BasePolarsTransform):
+    """Select Columns Operator transform model."""
 
     op: Literal["select"]
     columns: list[str]
+    allow_missing: bool = False
+
+    def apply(
+        self,
+        df: DataFrame,
+        engine: DictData,
+        **kwargs,
+    ) -> DataFrame:
+        """Apply to Select Column.
+
+        Args:
+            df (DataFrame):
+            engine:
+
+        Returns:
+            DataFrame: A column selected Spark DataFrame.
+        """
+        selection: list[str] = self.columns
+        if self.allow_missing:
+            selection: list[str] = [c for c in self.columns if c in df.columns]
+        return df.select(*selection)
+
+
+class ExplodeArrayColumn(BasePolarsTransform):
+    """Explode Array Column Operation transform model."""
+
+    op: Literal["explode_array"]
+    explode_col: str
+    is_explode_outer: bool = True
+    is_return_position: bool = False
+    position_prefix_name: str = "_index_pos"
 
     def apply(
         self,
@@ -152,7 +184,17 @@ class SelectColumns(BasePolarsTransform):
         engine: DictData,
         metric: MetricOperatorOrder,
         **kwargs,
-    ) -> AnyApplyOutput: ...
+    ) -> DataFrame:
+        if not self.is_return_position:
+            logger.info("Start Explode Array Column")
+            if self.is_explode_outer:
+                return df.with_columns(pl.col(self.explode_col).explode())
+            return df.with_columns(
+                pl.col(self.explode_col).list.drop_nulls().explode()
+            )
+        raise NotImplementedError(
+            "Does not support for return position column."
+        )
 
 
 class FlattenAllExceptArray(BasePolarsTransform):

@@ -5,20 +5,16 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from ..sink import Sink
 
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from pydantic.functional_validators import field_validator, model_validator
 from pyspark.sql import Column, DataFrame, Row, SparkSession
+from pyspark.sql import functions as f
 from pyspark.sql.functions import (
-    col,
     explode,
     explode_outer,
-    expr,
-    lit,
     posexplode,
     posexplode_outer,
-    when,
 )
-from pyspark.sql.functions import max as spark_max
 from pyspark.sql.types import StringType
 from typing_extensions import Self
 
@@ -31,14 +27,14 @@ from ..utils import (
     is_table_exist,
     replace_all_occurrences,
 )
-from .__abc import AnyApplyOutput, BaseSparkTransform, PairCol
+from .__abc import BaseSparkTransform, PairCol
 from .__models import RenameColMap
 
 logger = logging.getLogger("detool")
 
 
 class Expr(BaseSparkTransform):
-    """Expression Transform model."""
+    """Expression Operator Transform model."""
 
     op: Literal["expr"]
     name: str = Field(
@@ -66,11 +62,11 @@ class Expr(BaseSparkTransform):
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
-        return expr(self.query), self.name
+        return f.expr(self.query), self.name
 
 
 class SQL(BaseSparkTransform):
-    """SQL Transform model."""
+    """SQL Operator Transform model."""
 
     op: Literal["sql_transform"]
     query: str = Field(
@@ -184,7 +180,7 @@ class RenameSnakeCase(BaseSparkTransform):
 
             if schema.name.islower() is False or " " in schema.name:
                 new_col_name = to_snake_case(schema.name)
-                temp_dict[new_col_name] = col(schema.name)
+                temp_dict[new_col_name] = f.col(schema.name)
 
             dtype = schema.dataType.simpleString()
             if dtype.islower() is False or " " in dtype:
@@ -193,7 +189,7 @@ class RenameSnakeCase(BaseSparkTransform):
                     val = temp_dict[new_col_name]
                     temp_dict[new_col_name] = val.cast(new_dtype)
                 else:
-                    temp_dict[schema.name] = col(schema.name).cast(new_dtype)
+                    temp_dict[schema.name] = f.col(schema.name).cast(new_dtype)
 
             if len(temp_dict) > 0:
                 transform_dict = {**transform_dict, **temp_dict}
@@ -276,9 +272,11 @@ class RenameColumns(BaseSparkTransform):
 
 
 class SelectColumns(BaseSparkTransform):
-    op: Literal["select_columns"]
+    """Select Columns Operator transform model."""
+
+    op: Literal["select"]
     columns: list[str]
-    allow_missing_columns: bool = False
+    allow_missing: bool = False
 
     def apply(
         self,
@@ -288,10 +286,10 @@ class SelectColumns(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
-        """Apply select column.
+        """Apply to Select Column.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
@@ -299,13 +297,15 @@ class SelectColumns(BaseSparkTransform):
             spark (SparkSession, default None): A Spark session.
 
         Returns:
-            DataFrame:
+            DataFrame: A column selected Spark DataFrame.
         """
-        current_cols = df.columns
-        target_cols = self.columns
-        if self.allow_missing_columns:
-            target_cols = [c for c in self.columns if c in current_cols]
-        return df.select(*target_cols)
+        selection: list[str] = self.columns
+        if self.allow_missing:
+            selection: list[str] = [c for c in self.columns if c in df.columns]
+        logger.info("Select Columns")
+        for c in selection:
+            logger.info(f"> - {c}")
+        return df.select(*selection)
 
 
 class DropColumns(BaseSparkTransform):
@@ -324,7 +324,7 @@ class DropColumns(BaseSparkTransform):
         """Apply drop column.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
@@ -357,7 +357,7 @@ class CleanMongoJsonStr(BaseSparkTransform):
         """Apply to Clean Mongo Json string.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
@@ -372,27 +372,40 @@ class CleanMongoJsonStr(BaseSparkTransform):
             spark.udf.registerJavaFunction(
                 func_name, java_class_name, StringType()
             )
-            column: Column = expr(f"{func_name}({self.source})").cast("string")
+            column: Column = f.expr(f"{func_name}({self.source})").cast(
+                "string"
+            )
             return column, self.source
         mongo_udf = clean_mongo_json_udf(spark)
-        return mongo_udf(col(self.source)), self.source
+        return mongo_udf(f.col(self.source)), self.source
 
 
 class JsonStrToStruct(BaseSparkTransform):
-    op: Literal["json_str_to_struct"]
+    """Json string to Struct Operator transform model."""
+
+    op: Literal["json_to_struct"]
     source: str
     infer_timestamp: bool = True
     timestamp_format: str = "yyyy-MM-dd'T'HH:mm:ss[.SSS]'Z'"
     timestampntz_format: str = "yyyy-MM-dd'T'HH:mm:ss[.SSS]'Z'"
     mode: Literal["PERMISSIVE", "DROPMALFORMED", "FAILFAST"] = "FAILFAST"
-    tmp_dir: str | None = None
+    tmp_dir: str | None = Field(default=None)
+    _tmp_dir: str | None = PrivateAttr(default=None)
 
     def override_tmp_dir(self) -> str:
-        # NOTE: spark connect, cannot use RDD, so write to temporary instead
-        # TODO: need to add post execute func - to clean up temporary directory
         rand_str: str = get_random_str_unique(n=12)
         current_date: date = get_dt_now().date()
-        return f"{self.tmp_dir}/json_string_to_struct/{current_date}/{rand_str}"
+        self._tmp_dir: str = (
+            f"{self.tmp_dir}/json_string_to_struct/{current_date}/{rand_str}"
+        )
+        return self._tmp_dir
+
+    def post_apply(self, engine: DictData, **kwargs):
+        """Remove temp dir after apply this operator."""
+        if self._tmp_dir:
+            # TODO: need to add post execute func - to clean up temporary
+            #   directory
+            pass
 
     def apply(
         self,
@@ -401,34 +414,32 @@ class JsonStrToStruct(BaseSparkTransform):
         *,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> AnyApplyOutput:
+    ) -> DataFrame:
         """Apply convert JSON string column into new pyspark dataframe.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
+        # NOTE: spark connect, cannot use RDD, so write to temporary instead
         if is_remote_session(spark):
             temp_dir: str = self.override_tmp_dir()
-            logger.info(
-                "[func json_string_to_struct] write data to temporary dir: %s",
-                temp_dir,
-            )
+            logger.info(f"Write data to temporary dir: {temp_dir}")
             (
                 df.select(self.source)
                 .write.format("text")
                 .mode("overwrite")
                 .save(temp_dir)
             )
-            df_reader = spark.read.format("json").option("inferSchema", True)
+            reader = spark.read.format("json").option("inferSchema", True)
             if not self.infer_timestamp:
-                return df_reader.load(temp_dir, mode=self.mode)
+                return reader.load(temp_dir, mode=self.mode)
             return (
-                df_reader.option("inferTimestamp", self.infer_timestamp)
+                reader.option("inferTimestamp", self.infer_timestamp)
                 .option("timestampNTZFormat", self.timestampntz_format)
                 .load(
                     temp_dir,
@@ -437,13 +448,14 @@ class JsonStrToStruct(BaseSparkTransform):
                 )
             )
 
-        # NOTE: Cannot do c[str(self.source)] in lambda func, it will raise error
+        # IMPORTANT: Cannot do `c[str(self.source)]` in lambda func, it will
+        #   raise error.
         source_str: str = str(self.source)
         rdd_data = df.rdd.map(lambda c: c[source_str])
-        df_reader = spark.read.option("inferSchema", True)
+        reader = spark.read.option("inferSchema", True)
         if self.infer_timestamp:
             return (
-                df_reader.option("inferTimestamp", self.infer_timestamp)
+                reader.option("inferTimestamp", self.infer_timestamp)
                 .option("timestampNTZFormat", self.timestampntz_format)
                 .json(
                     rdd_data,
@@ -451,7 +463,7 @@ class JsonStrToStruct(BaseSparkTransform):
                     mode=self.mode,
                 )
             )
-        return df_reader.json(rdd_data, mode=self.mode)
+        return reader.json(rdd_data, mode=self.mode)
 
 
 class Scd2(BaseSparkTransform):
@@ -469,9 +481,7 @@ class Scd2(BaseSparkTransform):
     )
     def __convert_merge_key_to_dict(cls, value: Any) -> Any:
         """Convert the `merge_key` column that pass with string type to list."""
-        if isinstance(value, str):
-            return [value]
-        return value
+        return [value] if isinstance(value, str) else value
 
     def apply(
         self,
@@ -480,14 +490,13 @@ class Scd2(BaseSparkTransform):
         *,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> AnyApplyOutput:
-        """Apply to SCD2.
+    ) -> DataFrame:
+        """Apply to SCD Type 2.
 
-        Notes:
-            A method to prepare scd type 2 data. It has 4 steps:.
-
-            1: Get df_target from data warehouse (if exists)
-            2: Add `_scd2_start_time` and `_scd_end_time` column to df_source
+        This method do 4 steps:
+            1: Get the target DataFrame from data warehouse (if exists)
+            2: Add `_scd2_start_time` and `_scd_end_time` column to the source
+                DataFrame.
                 - `_scd2_start_time`:
                     - if id of the row already exist in target table,
                       _scd2_start_time will be update_key for that row
@@ -495,10 +504,11 @@ class Scd2(BaseSparkTransform):
                       _scd2_start_time will be create_key for that row
                 - `_scd2_end_time`: Defaults to NULL
             3: Update df_target._scd_end_time from null to df_source._scd2_start_time in some rows
-            4: Combine 2 df from step 2 and 3 together and send it to sink process
+            4: Combine both DataFrames from the step 2 and 3 together and send
+                it to sink process.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
@@ -511,16 +521,14 @@ class Scd2(BaseSparkTransform):
         db_name: str | None = None
         table_name: str | None = None
 
-        # NOTE: check if config_dict is not empty (not {})
+        # NOTE: Check if config_dict is not empty (not {})
         _sink: "Sink" = engine["engine"].sink
-        if _sink.type in ("iceberg-hdfs",):
-            logger.info("use sink's configuration from config dict")
-            db_name = _sink.database
-            table_name = _sink.table_name
+        if _sink.type in ("iceberg", "hdfs"):
+            logger.info("Use sink's configuration from config dict")
+            db_name: str = _sink.database
+            table_name: str = _sink.table_name
         elif _sink.type.startswith("local"):
-            raise NotImplementedError(
-                "Not support sink with local file sink type."
-            )
+            raise NotImplementedError("Does not support local sink type.")
         else:
             logger.info(
                 "No `db_name` and `table_name` provided. so no need to connect to "
@@ -531,14 +539,12 @@ class Scd2(BaseSparkTransform):
             db_name
             and table_name
             and is_table_exist(
-                spark=spark,
-                database=db_name,
-                table_name=table_name,
+                spark=spark, database=db_name, table_name=table_name
             )
         ):
             # Step01: get df_tgt
             tgt_df = spark.sql(f"SELECT * FROM {db_name}.{table_name}").filter(
-                col(self.col_end_name).isNull()
+                f.col(self.col_end_name).isNull()
             )
             # Step02: add _scd2_start_time and _scd_end_time column to df_source
             src_df = self._add_start_and_end_in_src(tgt_df=tgt_df, src_df=df)
@@ -553,8 +559,8 @@ class Scd2(BaseSparkTransform):
         #   provided, choose created_at as {scd2_start_col}.
         return df.withColumns(
             {
-                self.col_start_name: col(self.create_key),
-                self.col_end_name: lit(None).cast("timestamp"),
+                self.col_start_name: f.col(self.create_key),
+                self.col_end_name: f.lit(None).cast("timestamp"),
             }
         )
 
@@ -563,33 +569,30 @@ class Scd2(BaseSparkTransform):
         tgt_df: DataFrame,
         src_df: DataFrame,
     ) -> DataFrame:
-        """Add `_scd2_start_time` and `_scd_end_time` columns to the source
+        """Add thr `_scd2_start_time` and `_scd_end_time` columns to the source
         DataFrame.
         """
         # NOTE: get existing id in target table and max updated_at value
-        df_t_id = tgt_df.groupby(self.merge_key).agg(
-            spark_max(self.update_key).alias("_max_update_key")
+        tgt_df_max: DataFrame = tgt_df.groupby(self.merge_key).agg(
+            f.max(self.update_key).alias("_max_update_key")
         )
-        df_s_merge = src_df.join(df_t_id, on=self.merge_key, how="left")
+        src_df_merge = src_df.join(tgt_df_max, on=self.merge_key, how="left")
 
-        # NOTE: persist it before checking the wrong updated_at value to prevent
+        # NOTE: Persist it before checking the wrong updated_at value to prevent
         #   recompute data.
-        df_s_merge.persist()
+        src_df_merge.persist()
 
-        # NOTE: Check the wrong updated_at value from source
+        # NOTE: Check the wrong `updated_at` value from source
         #   - if target['_max_update_key'] > source[update_key]: it should not
         #       happen, we cannot get the past data from source.
-        select_col: list[str] = self.merge_key + [
-            self.update_key,
-            "_max_update_key",
-        ]
-        condition: Column = col("_max_update_key") > col(self.update_key)
-        wrong_df: DataFrame = df_s_merge.where(condition).select(*select_col)
-        wrong_data: list[Row] = wrong_df.take(1)
+        wrong_df: DataFrame = src_df_merge.filter(
+            f.col("_max_update_key") > f.col(self.update_key)
+        ).select(*(self.merge_key + [self.update_key, "_max_update_key"]))
 
         # NOTE: it's already persisted so should not take that much time to
         #   execute take(1)
-        if len(wrong_data) > 0:
+        if not wrong_df.isEmpty():
+            wrong_data: list[Row] = wrong_df.take(1)
             raise ValueError(
                 f"There are wrong `{self.update_key}` from source. It's lower "
                 f"than the existing value in the target table.",
@@ -599,32 +602,34 @@ class Scd2(BaseSparkTransform):
         # NOTE: if target['_max_update_key'] = source[update_key]: this case
         #   will happen when that rows already exist in the target because of
         #   rerunning the same job. So no need to reprocess and save it again.
-        df_s_merge_filter = df_s_merge.filter(
-            (df_t_id["_max_update_key"] < src_df[self.update_key])
-            | (df_t_id["_max_update_key"].isNull())
+        src_df_merge_filter = src_df_merge.filter(
+            (tgt_df_max["_max_update_key"] < src_df[self.update_key])
+            | (tgt_df_max["_max_update_key"].isNull())
         )
 
-        if df_s_merge_filter.isEmpty():
+        if src_df_merge_filter.isEmpty():
             logger.info(
                 "Every row in source df already existed in the target table. "
                 "So you will get an empty dataframe result"
             )
 
         # NOTE: create scd2_start_col by checking join result
-        check_merge_not_null = [
-            df_t_id[key].isNotNull() for key in self.merge_key
+        check_merge_not_null: list[Column] = [
+            tgt_df_max[key].isNotNull() for key in self.merge_key
         ]
-        df_result = df_s_merge_filter.withColumns(
+        final_df: DataFrame = src_df_merge_filter.withColumns(
             {
-                self.col_start_name: when(
-                    *check_merge_not_null, src_df[self.update_key]
-                ).otherwise(src_df[self.create_key]),
-                self.col_end_name: lit(None).cast("timestamp"),
+                self.col_start_name: (
+                    f.when(
+                        *check_merge_not_null, src_df[self.update_key]
+                    ).otherwise(src_df[self.create_key])
+                ),
+                self.col_end_name: f.lit(None).cast("timestamp"),
             }
         )
 
         # NOTE: remove merge key and _max_update_key that getting from join
-        return df_result.select(
+        return final_df.select(
             src_df["*"], self.col_start_name, self.col_end_name
         )
 
@@ -640,21 +645,23 @@ class Scd2(BaseSparkTransform):
 
         # NOTE: select only necessary using withColumn because we have
         #   duplicated column names
-        df_result: DataFrame = tgt_df.join(
-            src_df, on=merge_condition, how="inner"
+        final_df: DataFrame = tgt_df.join(
+            src_df,
+            on=merge_condition,
+            how="inner",
         ).select(tgt_df["*"], src_df[self.col_start_name])
 
         # NOTE: update tgt_df[scd2_end_col] = src_df[scd2_start_col], then keep o
         #   nly target and new `_scd_end_time` column
-        return df_result.withColumn(
+        return final_df.withColumn(
             self.col_end_name, src_df[self.col_start_name]
         ).drop(src_df[self.col_start_name])
 
 
 class ExplodeArrayColumn(BaseSparkTransform):
-    """Explode Array Column Operation Transform model."""
+    """Explode Array Column Operation transform model."""
 
-    op: Literal["explode_array_column"]
+    op: Literal["explode_array"]
     explode_col: str
     is_explode_outer: bool = True
     is_return_position: bool = False
@@ -673,7 +680,7 @@ class ExplodeArrayColumn(BaseSparkTransform):
         *,
         spark: SparkSession | None = None,
         **kwargs,
-    ) -> AnyApplyOutput:
+    ) -> DataFrame:
         """Apply to Explode Array Column.
 
         Args:
@@ -684,46 +691,37 @@ class ExplodeArrayColumn(BaseSparkTransform):
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
-        position_col_name = f"{self.position_prefix_name}_{self.explode_col}"
-        col_type_obj = df.schema[self.explode_col].dataType
-        if col_type_obj.typeName() not in ("array",):
-            raise ValueError("Support only ('array', ) data type")
-
-        if position_col_name in df.schema.fieldNames():
-            raise ValueError(
-                "Position column name is duplicated, please reconfigure "
-                "`position_prefix_name`"
-            )
-
-        logger.info("Start Explode array column")
         if not self.is_return_position:
+            logger.info("Start Explode Array Column")
             if self.is_explode_outer:
                 return df.withColumn(
-                    self.explode_col, explode_outer(col(self.explode_col))
+                    self.explode_col, explode_outer(f.col(self.explode_col))
                 )
             return df.withColumn(
-                self.explode_col, explode(col(self.explode_col))
+                self.explode_col, explode(f.col(self.explode_col))
             )
 
-        cols_name = df.columns
-        select_cols: list[str] = [
-            col_name
-            for col_name in cols_name
-            if not col_name == self.explode_col
-        ]
+        logger.info("Start Explode Array Column with Position.")
+        pos_col_name: str = f"{self.position_prefix_name}_{self.explode_col}"
+        if df.schema[self.explode_col].dataType.typeName() not in ("array",):
+            raise ValueError("Support only ('array', ) data type")
 
+        if pos_col_name in df.schema.fieldNames():
+            raise ValueError(
+                "Position column name is duplicated, please reconfigure "
+                "`position_prefix_name` field."
+            )
+        selection: list[str] = [c for c in df.columns if c != self.explode_col]
         if self.is_explode_outer:
             return df.select(
-                *select_cols,
+                *selection,
                 posexplode_outer(self.explode_col).alias(
-                    position_col_name, self.explode_col
+                    pos_col_name, self.explode_col
                 ),
             )
         return df.select(
-            *select_cols,
-            posexplode(self.explode_col).alias(
-                position_col_name, self.explode_col
-            ),
+            *selection,
+            posexplode(self.explode_col).alias(pos_col_name, self.explode_col),
         )
 
 
@@ -740,7 +738,7 @@ class FlattenAllExceptArray(BaseSparkTransform):
         spark: SparkSession | None = None,
         **kwargs,
     ) -> DataFrame:
-        """Apply to Flatten all Columns.
+        """Apply to Flatten all Columns except Array data type.
 
         Args:
             df (Any): A Spark DataFrame.
@@ -756,7 +754,7 @@ class FlattenAllExceptArray(BaseSparkTransform):
         transform_dict: dict[str, Column] = {}
         for c in extract_cols_without_array(schema=df.schema):
             flatten_col: str = "_".join(c.split("."))
-            transform_dict[flatten_col] = col(c)
+            transform_dict[flatten_col] = f.col(c)
 
         logger.info("Start Flatten all columns except array")
         for k, v in transform_dict.items():

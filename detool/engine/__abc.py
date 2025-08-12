@@ -507,6 +507,7 @@ class BaseTransform(BaseModel, ABC):
         try:
             return self.apply(df, engine=engine, **kwargs)
         finally:
+            self.post_apply(engine=engine, **kwargs)
             metric.finish()
 
     @classmethod
@@ -528,6 +529,8 @@ class BaseTransform(BaseModel, ABC):
     @staticmethod
     @abstractmethod
     def sync_schema(pre, post, metric, **kwargs) -> None: ...
+
+    def post_apply(self, engine: DictData, **kwargs): ...
 
 
 class BaseSink(BaseModel, ABC):

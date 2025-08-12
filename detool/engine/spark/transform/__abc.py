@@ -173,6 +173,7 @@ class BaseSparkTransform(BaseTransform, ABC):
                 df.cache()
             return rs
         finally:
+            self.post_apply(engine=engine, **kwargs)
             metric.finish()
 
     def handle_apply(
@@ -238,6 +239,7 @@ class BaseSparkTransform(BaseTransform, ABC):
             self.sync_schema(pre_schema, df.schema, metric=metric, spark=spark)
             return df
         finally:
+            self.post_apply(engine, **kwargs)
             metric.finish()
 
     @staticmethod

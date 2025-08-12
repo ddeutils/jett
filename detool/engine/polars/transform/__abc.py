@@ -119,6 +119,7 @@ class BasePolarsTransform(BaseTransform, ABC):
             self.sync_schema(pre_schema, df.schema, metric=metric)
             return df
         finally:
+            self.post_apply(engine=engine, **kwargs)
             metric.finish()
 
     @staticmethod
