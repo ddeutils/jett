@@ -17,6 +17,9 @@ AnyApplyOutput = AnyApplyGroupOutput | DataFrame
 TYPES: dict[str, type[DataType]] = {
     "string": pl.String,
     "boolean": pl.Boolean,
+    # "integer": ...,
+    # "double": ...,
+    # "timestamp": ...,
 }
 
 
@@ -73,6 +76,24 @@ class BasePolarsTransform(BaseTransform, ABC):
         engine: DictData,
         **kwargs,
     ) -> DataFrame:
+        """Handle the Operator Apply result output from its custom apply that
+        can make different type of result.
+
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            context: (Context): A execution context that was created from the
+                core operator execution step this context will keep all operator
+                metadata and metric data before emit them to metric config
+                model.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            **kwargs:
+
+        Returns:
+            DataFrame: A applied Polars DataFrame.
+        """
         logger.info(f"👷🔧 Handle Apply Operator: {self.op!r}")
         metric = MetricOperatorOrder(type="order", trans_op=self.op)
         context["metric_operator"].append(metric)

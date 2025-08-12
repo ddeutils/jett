@@ -1,11 +1,12 @@
-# DeTool (Just a Tool for Template Engines)
+# DeTool
 
-**DeTool** just a Tool for Template Engines that easy to use for Data Engineer.
-This project provide the ETL template for implemented DataFrame engine like
+**Just a Tool for Template Engines** that easy to use and develop for Data Engineer.
+This project support the ETL template for multiple DataFrame engine like
 `PySpark`, `Duckdb`, `Polars`, etc.
 
 **Supported Features**:
 
+- Dynamic supported Engines
 - JSON Schema Validation on any IDE.
 
 ## 📦 Installation
@@ -41,11 +42,11 @@ uv pip install -U detool
 
 ## 📝 Usage
 
-For example file, `etl.spark.tool` (I use `.tool` extension for validate it with
-JSON schema by pattern `*.tool`):
+For example, making file, `etl.polars.tool` (I use `.tool` be file extension for validate
+it with the JSON schema with pattern `*.tool`), for ETL state like:
 
 ```yaml
-type: spark
+type: polars
 name: Load CSV to GGSheet
 app_name: load_csv_to_ggsheet
 master: local
@@ -62,7 +63,7 @@ transforms:
   - op: group
     transforms:
       - op: expr
-        value: "CAST(id AS string)"
+        sql: "CAST(id AS string)"
 
 # 3) 🎯 Sink result to target
 sink:
@@ -79,6 +80,8 @@ metric:
     host: "localhost"
     port: 1234
 ```
+
+Use by Python API:
 
 ```python
 from detool import Tool
