@@ -36,7 +36,7 @@ uv pip install -U detool
 | Pyspark |   ✅    | Pyspark and Spark submit CLI for distributed workload |
 | DuckDB  |   ✅    | DuckDB and Spark API DuckDB                           |
 | Polars  |   ✅    | Polars for Python workload                            |
-| Arrow   |   ❌    |                                                       |
+| Arrow   |   ✅    | Arrow for Python workflow with Columnar               |
 | Daft    |   ❌    |                                                       |
 | DBT     |   ❌    | DBT for SQL workload                                  |
 

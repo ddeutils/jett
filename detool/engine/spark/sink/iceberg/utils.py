@@ -93,31 +93,30 @@ def get_table_partition_columns(
 
 
 def get_current_snapshot_id(
-    spark: SparkSession | SparkRemoteSession,
-    db_name: str,
-    table_name: str,
+    spark: SparkSession | SparkRemoteSession, database: str, table_name: str
 ) -> str:
     """Get the current snapshot id from DDL."""
     rows: list[Row] = spark.sql(
-        f"DESC EXTENDED {db_name}.{table_name}"
+        f"DESC EXTENDED {database}.{table_name}"
     ).collect()
-    table_properties = [
+    table_properties: list[str] = [
         row.data_type for row in rows if row.col_name == "Table Properties"
     ]
-    # NOTE: empty table also has table property where value is set to
+    # NOTE: Empty table also has table property where value is set to
     #   `current-snapshot-id=none`.
-    table_properties = table_properties[0]
-    snapshot_id = regex_by_group(
+    table_properties: str = table_properties[0]
+    snapshot_id: str = regex_by_group(
         text=table_properties, regex=r"current-snapshot-id=(\d+)", n=1
     )
     return snapshot_id
 
 
 def extract_hidden_partition(partition_spec: list[str]) -> dict[str, str]:
-    """extract Iceberg hidden partitioning spec and function
+    """Extract Iceberg hidden partitioning spec and function.
 
     Args:
-        partition_spec: list of partition specification (e.g. ['day(created_at)', 'category'])
+        partition_spec (list[str]): list of partition specification
+            (e.g. ['day(created_at)', 'category'])
 
     Returns:
         dict: dict of partition specification, the example structure is shown as below

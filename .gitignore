@@ -212,3 +212,4 @@ spark-warehouse/
 # Dummy Data
 !assets/data/spark_auth_failed_exception.log
 !assets/data/spark_auth_failed_traceback.log
+/tests/tmp/warehouse/

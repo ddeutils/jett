@@ -231,12 +231,12 @@ def extract_cols_without_array(schema: StructType) -> list[str]:
 
     rs: list[str] = []
     for c in final_selectable_cols:
-        is_not_parent_column: bool = True
-        for _column in final_selectable_cols:
-            if _column != c and _column.startswith(f"{c}."):
-                is_not_parent_column: bool = False
+        not_parent: bool = True
+        for fc in final_selectable_cols:
+            if fc != c and fc.startswith(f"{c}."):
+                not_parent: bool = False
 
-        if is_not_parent_column:
+        if not_parent:
             rs.append(c)
     return rs
 

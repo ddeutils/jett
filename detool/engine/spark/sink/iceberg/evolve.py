@@ -37,13 +37,13 @@ from .utils import (
 logger = logging.getLogger("detool")
 
 
-class TableEvolver(BaseModel):
+class EvolverModel(BaseModel):
     """Iceberg Table Evolver, A Class for Evolution of Iceberg Table Schema and
     Partition.
     """
 
-    database: str
-    table_name: str
+    database: str = Field(description="A database name.")
+    table_name: str = Field(description="A table name.")
     schema_evolve_behavior: Literal["trust_source", "append", "trust_sink"] = (
         Field(
             description="behavior of how to evolve schema, please see IcebergModel"
@@ -70,11 +70,15 @@ class TableEvolver(BaseModel):
 class Evolver:
 
     def __init__(
-        self, model: TableEvolver, *, df: DataFrame, spark: SparkSession
+        self,
+        model: EvolverModel,
+        *,
+        df: DataFrame,
+        spark: SparkSession,
     ) -> None:
-        self.model = model
-        self.df = df
-        self.spark = spark
+        self.model: EvolverModel = model
+        self.df: DataFrame = df
+        self.spark: SparkSession = spark
 
         # NOTE: Set internal arguments
         self.is_schema_diff: bool = False
@@ -88,10 +92,6 @@ class Evolver:
 
         self.transform_schema_to_drop: list[str] = []
         self.transform_schema_after_drop: StructType | None = None
-
-    # _transform_schema_to_drop_cols: list[str] = PrivateAttr(default=list)
-    # _transform_schema_after_drop_cols: StructType = PrivateAttr(default=None)
-    #
 
     def __execute_add_column(self, to_add_col_cmds):
         logger.info("total new columns: %s", len(to_add_col_cmds))
@@ -382,9 +382,9 @@ class Evolver:
             )
 
     def fetch_detailed_changes(self) -> list[dict]:
-        """
-        wrapper of evaluate_schema_change function that use for
-        getting detailed changes of each different column or field from DataFrame schema compare to table schema
+        """Wrapper of evaluate_schema_change function that use for getting
+        detailed changes of each different column or field from DataFrame schema
+        compare to table schema.
         """
         source_schema: StructType = self.df.schema
         table_schema: StructType = self.spark.sql(

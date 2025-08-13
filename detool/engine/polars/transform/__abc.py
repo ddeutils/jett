@@ -5,14 +5,15 @@ from typing import Any
 import polars as pl
 from polars import DataFrame, DataType, Schema
 from polars import Expr as Column
+from pydantic import BaseModel, Field
 
 from ....__types import DictData
 from ....models import Context, MetricOperatorOrder, MetricOperatorTransform
 from ...__abc import BaseTransform
-from .__types import PairCol
 
 logger = logging.getLogger("detool")
 
+PairCol = tuple[Column, str]
 AnyApplyGroupOutput = PairCol | list[PairCol]
 AnyApplyOutput = AnyApplyGroupOutput | DataFrame
 DTYPES: dict[str, type[DataType]] = {
@@ -126,3 +127,12 @@ class BasePolarsTransform(BaseTransform, ABC):
     def sync_schema(
         pre: Schema, post: Schema, metric: MetricOperatorTransform, **kwargs
     ) -> None: ...
+
+
+class ColMap(BaseModel):
+    """Column Map model."""
+
+    name: str = Field(description="A new column name.")
+    source: str = Field(
+        description="A source column statement before alias with alias.",
+    )

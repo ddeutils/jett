@@ -93,7 +93,8 @@ def evaluate_schema_change(
     parent_cols: list[str] = parent_cols or []
     diffs: list[Changed] = []
 
-    # NOTE: handle case that source schema and table schema are not the same type
+    # NOTE: Handle case the source schema and table schema are not the same type.
+    #   This case it will mark `Alter` type.
     if src_schema.__class__ != tgt_schema.__class__:
         diffs.append(
             {

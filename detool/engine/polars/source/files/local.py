@@ -49,11 +49,13 @@ class LocalJsonFile(BaseSource):
     path: str
 
     def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
+        """Load JSON file from local file system."""
         file_format: str = Path(self.path).suffix
         if file_format not in (".json",):
             raise NotImplementedError(
                 f"Local file format: {file_format!r} does not support."
             )
+
         if self.file_format == "ndjson":
             df: DataFrame = pl.read_ndjson(source=self.path)
         else:

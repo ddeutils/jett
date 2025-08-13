@@ -1,11 +1,140 @@
+import copy
 import re
+from typing import Final
 
 import polars as pl
 from polars import Array, Expr, Field, List, Schema, Struct
 
+from ...utils import is_snake_case
+
+ALLOW_VALIDATE_PATTERNS: Final[tuple[str, ...]] = (
+    "non_snake_case",
+    "whitespace",
+)
+
+
+def extract_col_with_pattern(
+    schema: Schema | Struct,
+    patterns: list[str],
+    parent_cols: list[str] | None = None,
+) -> list[str]:
+    """Do recursive find the colum name that does not follow the pattern
+    current supported patterns are non_snake_case and whitespace.
+
+    Args:
+        schema (Schema | Struct): A Schema or Struct Polars object.
+        patterns (list[str]):
+        parent_cols (list[str], default None):
+    """
+    parent_cols: list[str] = parent_cols or []
+
+    def _validate_and_append_error(
+        name: str,
+        p_cols: list[str],
+        e_cols: list[str],
+        pt: list[str],
+    ) -> list[str]:
+        """Child Wrapped function for extract_pyspark_column_names_with_pattern
+        validate snake case or whitespace and append error columns
+
+        Args:
+            name (str): A column name.
+            p_cols: A parent columns
+            e_cols: An error columns
+            pt:
+        """
+        is_found_err: bool = False
+        for pattern in pt:
+            if pattern == "non_snake_case" and not is_snake_case(name):
+                is_found_err = True
+            elif pattern == "whitespace" and " " in name:
+                is_found_err = True
+
+        if is_found_err:
+            e_cols.append(
+                name if len(p_cols) == 0 else ".".join(p_cols) + f".{name}"
+            )
+
+        return e_cols
+
+    if all(p not in ALLOW_VALIDATE_PATTERNS for p in patterns):
+        raise ValueError(
+            f"patterns must contain value in {ALLOW_VALIDATE_PATTERNS}"
+        )
+
+    error_cols: list[str] = []
+    struct: Struct = (
+        schema2struct(schema) if isinstance(schema, Schema) else Struct
+    )
+    for field in struct.fields:
+        if isinstance(field.dtype, (Array, List)):
+            if isinstance(field.dtype.inner, Struct):
+                _parent_cols = copy.deepcopy(parent_cols)
+                _parent_cols.append(field.name)
+                error_cols = error_cols + extract_col_with_pattern(
+                    schema=field.dtype.inner,
+                    patterns=patterns,
+                    parent_cols=_parent_cols,
+                )
+            else:
+                error_cols: list[str] = _validate_and_append_error(
+                    name=field.name,
+                    p_cols=parent_cols,
+                    e_cols=error_cols,
+                    pt=patterns,
+                )
+        elif isinstance(field.dtype, Struct):
+            _parent_cols = copy.deepcopy(parent_cols)
+            _parent_cols.append(field.name)
+            error_cols: list[str] = error_cols + extract_col_with_pattern(
+                schema=field.dtype,
+                patterns=patterns,
+                parent_cols=_parent_cols,
+            )
+        else:
+            error_cols: list[str] = _validate_and_append_error(
+                name=field.name,
+                p_cols=parent_cols,
+                e_cols=error_cols,
+                pt=patterns,
+            )
+    return error_cols
+
+
+def validate_col_disallow_pattern(
+    schema: Schema | Struct, patterns: list[str]
+) -> None:
+    """Validate columns names in dataframe (support nested schema) from the
+    pattern.
+    """
+    if all(p not in ALLOW_VALIDATE_PATTERNS for p in patterns):
+        raise ValueError(
+            f"Patterns must contain value in {ALLOW_VALIDATE_PATTERNS}"
+        )
+
+    error_cols = extract_col_with_pattern(schema=schema, patterns=patterns)
+    if len(error_cols) > 0:
+        cols: str = ", ".join(error_cols)
+        raise ValueError(
+            f"Please check column naming convention (must not be {patterns!r}) "
+            f"on columns: {cols}"
+        )
+
+
+def validate_col_allow_snake_case(schema: Schema | Struct) -> None:
+    """Validate columns, allow only snake case."""
+    validate_col_disallow_pattern(schema=schema, patterns=["non_snake_case"])
+
 
 def schema2struct(schema: Schema) -> Struct:
-    """Convert Schema object to Struct."""
+    """Convert Schema object to Struct.
+
+    Args:
+        schema (Schema):
+
+    Returns:
+        Struct: A Struct object that create from the Polars Schema.
+    """
     return Struct([Field(name, dtype) for name, dtype in schema.items()])
 
 
@@ -28,12 +157,12 @@ def extract_cols_selectable(
         >>> from polars import Field, String, Int64, Float64
         >>> Struct(
         ...     [
-        ...         Field("texts", Array(String())),
-        ...         Field("items", Array(Struct(
+        ...         Field("texts", List(String())),
+        ...         Field("items", List(Struct(
         ...             [
         ...                 Field("name", String()),
         ...                 Field("price", Int64()),
-        ...                 Field("detail", Array(Struct(
+        ...                 Field("detail", List(Struct(
         ...                     [
         ...                         Field("field1", String()),
         ...                         Field("field2", Float64()),
@@ -101,8 +230,8 @@ def extract_cols_without_array(schema: Schema) -> list[str]:
     rs: list[str] = []
     for c in final_selectable_cols:
         is_not_parent_column: bool = True
-        for _column in final_selectable_cols:
-            if _column != c and _column.startswith(f"{c}."):
+        for fc in final_selectable_cols:
+            if fc != c and fc.startswith(f"{c}."):
                 is_not_parent_column: bool = False
 
         if is_not_parent_column:
@@ -118,11 +247,11 @@ def col_path(path: str) -> Expr:
         >>> col_path('a[5].b')
 
     References:
-        - https://gist.github.com/ophiry/78e6e04a8fde01e58ee289febf3bc4cc
+        - ISSUE - https://github.com/pola-rs/polars/issues/3123
+        - FIX - https://gist.github.com/ophiry/78e6e04a8fde01e58ee289febf3bc4cc
     """
     parsed_path = re.findall(r"\.(\w+)|\[(\d+)]", f".{path}")
-
-    expr = pl.col(parsed_path[0][0])
+    expr: Expr = pl.col(parsed_path[0][0])
     for field, index in parsed_path[1:]:
         if field:
             expr = expr.struct.field(field)

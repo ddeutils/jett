@@ -16,9 +16,7 @@ from ....models import MetricOperatorOrder
 from ....utils import to_snake_case
 from ...__abc import BaseEngine
 from ..utils import col_path, extract_cols_without_array
-from .__abc import BasePolarsTransform
-from .__models import ColMap
-from .__types import PairCol
+from .__abc import BasePolarsTransform, ColMap, PairCol
 
 logger = logging.getLogger("detool")
 
@@ -30,19 +28,22 @@ class RenameSnakeCase(BasePolarsTransform):
         description="An operator transform type.",
     )
 
-    def apply(
-        self,
-        df: DataFrame,
-        engine: DictData,
-        metric: MetricOperatorOrder,
-        **kwargs,
-    ) -> DataFrame:
-        rename_mapping = {col: to_snake_case(col) for col in df.columns}
+    def apply(self, df: DataFrame, engine: DictData, **kwargs) -> DataFrame:
+        """Apply to Rename Column with Snakecase to the Polars DataFrame.
+
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+        """
+        renames: dict[str, str] = {c: to_snake_case(c) for c in df.columns}
         logger.info(
             f"Start Rename All columns to Snakecase:\n"
-            f"{json.dumps(rename_mapping, indent=1)}"
+            f"{json.dumps(renames, indent=1)}"
         )
-        return df.rename(rename_mapping)
+        return df.rename(renames)
 
 
 class RenameColumns(BasePolarsTransform):
@@ -124,6 +125,21 @@ class Sql(BasePolarsTransform):
         metric: MetricOperatorOrder,
         **kwargs,
     ) -> DataFrame:
+        """Apply to SQL query.
+
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+            metric (MetricOperatorOrder): A metric transform that was set from
+                handler step for passing custom metric data.
+
+        Returns:
+            DataFrame: A Polars DataFrame that have applied SQL query via `sql`
+                method.
+        """
         logger.info("Start Prepare SQL statement ...")
         if self.sql:
             sql: str = self.sql
@@ -146,19 +162,23 @@ class SelectColumns(BasePolarsTransform):
 
     op: Literal["select"]
     columns: list[str]
-    allow_missing: bool = False
+    allow_missing: bool = Field(
+        default=False,
+        description=(
+            "A flag to allow missing column when compare from the current "
+            "DataFrame."
+        ),
+    )
 
-    def apply(
-        self,
-        df: DataFrame,
-        engine: DictData,
-        **kwargs,
-    ) -> DataFrame:
+    def apply(self, df: DataFrame, engine: DictData, **kwargs) -> DataFrame:
         """Apply to Select Column.
 
         Args:
-            df (DataFrame):
-            engine:
+            df (DataFrame): A Polars DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
 
         Returns:
             DataFrame: A column selected Spark DataFrame.
@@ -178,13 +198,19 @@ class ExplodeArrayColumn(BasePolarsTransform):
     is_return_position: bool = False
     position_prefix_name: str = "_index_pos"
 
-    def apply(
-        self,
-        df: DataFrame,
-        engine: DictData,
-        metric: MetricOperatorOrder,
-        **kwargs,
-    ) -> DataFrame:
+    def apply(self, df: DataFrame, engine: DictData, **kwargs) -> DataFrame:
+        """Apply to Explode Array column.
+
+        Args:
+            df (DataFrame): A Polars DataFrame.
+            engine (DictData): An engine context data that was created from the
+                `post_execute` method. That will contain engine model, engine
+                session object for this execution, or it can be specific config
+                that was generated on that current execution.
+
+        Returns:
+            DataFrame: A Polars DataFrame that have exploded column.
+        """
         if not self.is_return_position:
             logger.info("Start Explode Array Column")
             if self.is_explode_outer:
@@ -202,12 +228,7 @@ class FlattenAllExceptArray(BasePolarsTransform):
 
     op: Literal["flatten_all_except_array"]
 
-    def apply(
-        self,
-        df: DataFrame,
-        engine: DictData,
-        **kwargs,
-    ) -> DataFrame:
+    def apply(self, df: DataFrame, engine: DictData, **kwargs) -> DataFrame:
         """Apply to Flatten all Columns except Array or List data type.
 
         Args:

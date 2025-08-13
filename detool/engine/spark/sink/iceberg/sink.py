@@ -4,11 +4,12 @@ from typing import Any, Literal
 
 from pydantic import Field
 from pydantic.functional_validators import field_validator, model_validator
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, Row, SparkSession
 from typing_extensions import Self
 
 from .....__types import DictData
 from .....conf import spark_env
+from .....models import MetricSink
 from .....utils import (
     clean_string,
     dt2str,
@@ -22,7 +23,7 @@ from ...utils import (
     is_timestamp_column,
     validate_col_allow_snake_case,
 )
-from .evolve import Evolver, TableEvolver
+from .evolve import Evolver, EvolverModel
 from .maintenance import TableMaintenance
 from .utils import (
     SPARK_TEMP_VIEW_NAME,
@@ -46,8 +47,6 @@ class Iceberg(BaseSink):
              WHEN MATCHED AND s.op = 'delete' THEN DELETE
              WHEN MATCHED AND t.count IS NULL AND s.op = 'increment' THEN UPDATE SET t.count = 0
              WHEN MATCHED AND s.op = 'increment' THEN UPDATE SET t.count = t.count + 1
-    :param database: database name
-    :param table_name: table name
     :param partition_by: a list of columns to be partitioned, partitioning will respect the order of list
     :param table_property: a key-pair of Iceberg table property
     :param retention_days: a number of days that we will retain the data in the table
@@ -69,13 +68,18 @@ class Iceberg(BaseSink):
 
     type: Literal["iceberg"]
     mode: Literal["append", "overwrite", "merge"] = Field(
+        default="overwrite",
         description=(
             "A write mode that should be `append`, `overwrite`, or `merge` "
             "only."
         ),
     )
-    database: str = Field(pattern=r"^[a-z0-9_]*$")
-    table_name: str = Field(pattern=r"^[a-z0-9_]*$")
+    database: str = Field(
+        pattern=r"^[a-z0-9_]*$", description="A database name."
+    )
+    table_name: str = Field(
+        pattern=r"^[a-z0-9_]*$", description="A table name."
+    )
     table_property: dict | None = Field(default_factory=dict)
     retention_days: int | None = None
     retention_key: str | None = None
@@ -93,10 +97,8 @@ class Iceberg(BaseSink):
 
     @field_validator("retention_days", mode="after")
     def __retention_period(cls, value: int | None) -> int | None:
-        if value is None:
-            return value
-        elif value < 1:
-            raise ValueError("need to have value more than 0")
+        if value is not None and value < 1:
+            raise ValueError("The `retention_days` should more than 0.")
         return value
 
     @model_validator(mode="after")
@@ -129,7 +131,7 @@ class Iceberg(BaseSink):
             )
         return self
 
-    def _validate_partition_column(self, df: DataFrame) -> None:
+    def validate_partition_exists(self, df: DataFrame) -> None:
         """Validate the partition column, it can be only first level column,
         not support struct
 
@@ -137,23 +139,30 @@ class Iceberg(BaseSink):
             df (DataFrame): A Spark DataFrame.
         """
         if self.partition_by:
-            first_columns_lv = (
-                self._get_first_column_level_not_have_nested_struct(df=df)
-            )
-            partition_cols = []
+            first_columns_lv: list[str] = [
+                c.name
+                for c in df.schema
+                if "struct" not in c.simpleString().split(":")[1]
+            ]
+            partition_cols: list[str] = []
             for p in self.partition_by:
-                # NOTE: Start Prepare string value.
-                #   bucket(2, _id) -> ["bucket(", "2, _id)"] -> "2, _id)" -> "2, _id)"
-                _p = p.split("(")[-1]
-                _p = _p.replace(")", "")  # NOTE: "2, _id)" -> "2, _id"
-                _p = _p.split(",")[-1]  # NOTE: "2, _id" -> " _id"
-                _p = _p.strip()  # NOTE: " _id" -> "_id"
+                # NOTE: Start Prepare string value if it passes with bucket like
+                #   `["bucket(2, _id)"]`.
+                #   - Step: "bucket(2, _id)" -> "2, _id)"
+                #   - Step: "2, _id)"        -> "2, _id"
+                #   - Step: "2, _id"         -> " _id"
+                #   - Step: " _id"           -> "_id"
+                #
+                _p: str = p.split("(")[-1]
+                _p: str = _p.replace(")", "")
+                _p: str = _p.split(",")[-1]
+                _p: str = _p.strip()
                 partition_cols.append(_p)
 
             for p in partition_cols:
                 if p not in first_columns_lv:
                     raise ValueError(
-                        f"partition column {p} not found, partition column "
+                        f"Partition column {p} not found, partition column "
                         f"must be 1st level column only"
                     )
 
@@ -251,7 +260,9 @@ class Iceberg(BaseSink):
                     "please create database in your env (aws / iu) before write a table"
                 )
 
-    def _create_table(self, df: DataFrame, spark: SparkSession) -> None:
+    def _create_table(
+        self, df: DataFrame, spark: SparkSession, metric: MetricSink
+    ) -> None:
         """
         create iceberg table if not exist
         """
@@ -265,29 +276,24 @@ class Iceberg(BaseSink):
             logger.info(f"execute sparksql: {ddl}")
             spark.sql(ddl)
             self._is_table_created = True
-            self._set_metric_table_operation_create_table(df=df)
+
+            # NOTE: set metric sink of table operation when table is created.
+            operations = []
+            for schema in df.schema.fields:
+                _s = schema.simpleString().split(":", maxsplit=1)
+                operations.append(
+                    {
+                        "name": _s[0],
+                        "data_type": _s[1],
+                    }
+                )
+            metric.add(
+                key="table_operation_create_table_columns",
+                value=operations,
+            )
         else:
             logger.info("table exists")
             self._is_table_created = False
-
-    def _set_metric_table_operation_create_table(self, df: DataFrame) -> None:
-        """
-        set metric sink of table operation when table is created
-        """
-        operations = []
-        for schema in df.schema.fields:
-            _s = schema.simpleString().split(":", maxsplit=1)
-            operations.append(
-                {
-                    "name": _s[0],
-                    "data_type": _s[1],
-                }
-            )
-
-        self._metric_sink.set_extra(
-            key="table_operation_create_table_columns",
-            value=operations,
-        )
 
     def _get_append_statement(self) -> str:
         """
@@ -432,16 +438,14 @@ class Iceberg(BaseSink):
         return sql
 
     def _get_write_statistics(self, spark: SparkSession) -> dict:
-        """
-        get write statistics of last table write operation
-        """
-        snapshot_id = get_current_snapshot_id(
-            spark=spark,
-            db_name=self.database,
-            table_name=self.table_name,
+        """Get write statistics of last table write operation."""
+        snapshot_id: str = get_current_snapshot_id(
+            spark=spark, database=self.database, table_name=self.table_name
         )
-        sql = f"SELECT * FROM {self.database}.{self.table_name}.snapshots WHERE snapshot_id = '{snapshot_id}'"
-        raw_stats = spark.sql(sql).collect()[0]
+        raw_stats: Row = spark.sql(
+            f"SELECT * FROM {self.database}.{self.table_name}.snapshots "
+            f"WHERE snapshot_id = '{snapshot_id}'"
+        ).collect()[0]
         added_file_size = raw_stats.summary.get("added-files-size", 0)
         stats = {
             "written_rows": raw_stats.summary.get("added-records", 0),
@@ -457,21 +461,12 @@ class Iceberg(BaseSink):
         }
         return stats
 
-    def _set_metric_detail_of_write_stats(self, write_statistic: dict) -> None:
-        """set metric detaial of Iceberg write's statistics."""
-        self._metric_sink.destination_ref_1 = self.table_name
-        self._metric_sink.write_row_count = int(
-            write_statistic.get("written_rows")
-        )
-        self._metric_sink.set_extra(
-            "affected_partitions",
-            int(write_statistic.get("affected_partitions")),
-        )
-
-    def _find_last_record_from_column(self, spark: SparkSession) -> None:
-        """
-        compute last record of given input and set the metric
-        """
+    def _find_last_record_from_column(
+        self,
+        spark: SparkSession,
+        metric: MetricSink,
+    ) -> None:
+        """Compute last record of given input and set the metric."""
         if self.find_last_record_from_column is not None:
             table_schema = spark.sql(
                 f"SELECT * FROM {self.database}.{self.table_name} LIMIT 0"
@@ -502,8 +497,8 @@ class Iceberg(BaseSink):
             last_record = dt2str(last_record, sep=" ", timespec="microseconds")
 
             logger.info("last record: %s", last_record)
-            self._metric_sink.set_extra("latest_record_update", last_record)
-            self._metric_sink.set_extra(
+            metric.add("latest_record_update", last_record)
+            metric.add(
                 "latest_record_update_from_column",
                 self.find_last_record_from_column,
             )
@@ -525,38 +520,34 @@ class Iceberg(BaseSink):
         self,
         df: DataFrame,
         engine: DictData,
+        metric: MetricSink,
         **kwargs,
     ) -> Any:
         """Save the result data to the Iceberg table.
 
         Args:
-            df: DataFrame
-            engine: DictData
+            df (DataFrame): A Spark DataFrame.
+            engine (DictData):
+            metric (MetricSink):
         """
         logger.info("Sink - Start sink to Iceberg.")
         spark: SparkSession = engine["spark"]
 
         if df.isEmpty():
             logger.warning("Sink - Found empty dataframe, skip write")
-            self._set_metric_detail_of_write_stats(
-                write_statistic={
-                    "written_rows": 0,
-                    "affected_partitions": 0,
-                }
-            )
-            return df
+            metric.add("affected_partitions", 0)
+            return df, Shape(rows=0, columns=0)
 
         logger.info("Sink - Validate table spec and dataframe")
         if self.validate_column_snake_case:
             validate_col_allow_snake_case(schema=df.schema)
+        self.validate_partition_exists(df=df)
 
-        self._validate_partition_column(df=df)
+        logger.info(f"> database name: {self.database}")
+        logger.info(f"> table name: {self.table_name}")
 
-        logger.info("db name: %s", self.database)
-        logger.info("table name: %s", self.table_name)
-        # start initializing Iceberg helpers
-        logger.info("start table evolve ...")
-        evolve_model = TableEvolver.model_validate(self, from_attributes=True)
+        logger.info("Start Iceberg Table Evolve ...")
+        evolve_model = EvolverModel.model_validate(self, from_attributes=True)
         evolver = Evolver(model=evolve_model, df=df, spark=spark)
 
         logger.info("start table maintenance ...")
@@ -566,17 +557,17 @@ class Iceberg(BaseSink):
         # start Iceberg write operation
         logger.info("write df to iceberg table")
         self._create_database(spark=spark)
-        self._create_table(df, spark=spark)
+        self._create_table(df, spark=spark, metric=metric)
 
         evolver.evolve_schema()
         evolver.evolve_partition()
         df = evolver.df
 
-        self._metric_sink.set_extra("alter_history", evolver.list_sql_alter)
+        metric.add("alter_history", evolver.list_sql_alter)
         alter_list, add_list, drop_list = evolver.get_simple_detail_changes()
-        self._metric_sink.set_extra("table_operation_alter_columns", alter_list)
-        self._metric_sink.set_extra("table_operation_add_columns", add_list)
-        self._metric_sink.set_extra("table_operation_drop_columns", drop_list)
+        metric.add("table_operation_alter_columns", alter_list)
+        metric.add("table_operation_add_columns", add_list)
+        metric.add("table_operation_drop_columns", drop_list)
 
         df = self._apply_table_schema_to_dataframe(df, spark=spark)
 
@@ -589,25 +580,28 @@ class Iceberg(BaseSink):
         logger.info("wrote successfully")
 
         stats = self._get_write_statistics(spark=spark)
-        logger.info("written rows: %s", stats["written_rows"])
+        logger.info(f"> Written rows: {stats['written_rows']}")
         logger.info(
-            "written bytes: %s (%s)",
-            stats["written_bytes"],
-            stats["written_bytes_formatted"],
+            f"> Written bytes: {stats['written_bytes']} "
+            f"({stats['written_bytes_formatted']})"
         )
-        logger.info("affected partitions: %s", stats["affected_partitions"])
-        self._set_metric_detail_of_write_stats(stats)
+        logger.info(
+            f"> Written Affected partitions: {stats['affected_partitions']}"
+        )
+        metric.add("affected_partitions", int(stats.get("affected_partitions")))
 
         maintain.retain_data(spark=spark)
         maintain.expire_snapshot(spark=spark)
 
-        # write operation already completed
-        self._find_last_record_from_column(spark=spark)
-        shape: tuple[int, int] = (df.count(), len(df.columns))
-        return df, Shape.from_tuple(shape)
+        # NOTE: Write operation already completed
+        self._find_last_record_from_column(spark=spark, metric=metric)
+        return (
+            df,
+            Shape(rows=stats.get("written_rows"), columns=len(df.columns)),
+        )
 
     def outlet(self) -> tuple[str, str]:
         return "iceberg", self.dest()
 
     def dest(self) -> str:
-        return f"{self.database}.{self.table_name}"
+        return f"{self.table_name}"
