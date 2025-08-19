@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-logger = logging.getLogger("detool")
+logger = logging.getLogger("jett")
 
 
 @pytest.fixture(scope="package", autouse=True)

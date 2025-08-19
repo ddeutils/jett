@@ -7,7 +7,7 @@ from urllib.request import urlretrieve
 
 from pyspark.sql import SparkSession
 
-logger = logging.getLogger("detool")
+logger = logging.getLogger("jett")
 
 SPARK_DISABLE: bool = not bool(int(os.getenv("TOOL__TEST__SPARK_ENABLE", "0")))
 

@@ -3,8 +3,8 @@ requires = [ "hatchling>=1.8.0" ]
 build-backend = "hatchling.build"
 
 [project]
-name = "detool"
-description = "just a tools for template engines"
+name = "jett"
+description = "just a engine template tool"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -31,12 +31,12 @@ dev = [
 ]
 
 [project.scripts]
-detool = "detool.__main__:cli"
+jett = "jett.__main__:cli"
 
 [tool.hatch.version]
 scheme = "standard"
 source = "code"
-path = "detool/__about__.py"
+path = "jett/__about__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
@@ -47,10 +47,10 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = [ "detool" ]
+packages = [ "jett" ]
 
 [tool.shelf.version]
-version = "./detool/__about__.py"
+version = "./jett/__about__.py"
 changelog = "./docs/changelog.md"
 commit_subject_format = "{emoji} {subject}"
 commit_msg_format = "- {subject}"
@@ -62,10 +62,10 @@ commit_prefix_force_fix = true
 branch = true
 relative_files = true
 concurrency = [ "thread", "multiprocessing" ]
-source = [ "detool" ]
+source = [ "jett" ]
 omit = [
-    "detool/__about__.py",
-    "detool/__init__.py",
+    "jett/__about__.py",
+    "jett/__init__.py",
 ]
 
 [tool.coverage.report]
@@ -75,7 +75,7 @@ exclude_lines = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = [ "detool" ]
+pythonpath = [ "jett" ]
 console_output_style = "count"
 addopts = [
     "--strict-config",
@@ -113,8 +113,8 @@ exclude = """
 """
 
 [project.urls]
-Homepage = "https://github.com/ddeutils/detool/"
-"Source Code" = "https://github.com/ddeutils/detool/"
+Homepage = "https://github.com/ddeutils/jett/"
+"Source Code" = "https://github.com/ddeutils/jett/"
 
 [tool.ruff]
 line-length = 80

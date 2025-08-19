@@ -5,8 +5,8 @@ from textwrap import dedent
 
 import pytest
 
-from detool.conf import substitute_env_vars
-from detool.utils import load_yaml
+from jett.conf import substitute_env_vars
+from jett.utils import load_yaml
 
 
 @pytest.fixture(scope="function")

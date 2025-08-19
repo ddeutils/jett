@@ -1,6 +1,6 @@
-# DeTool
+# Jett
 
-**Just a Tool for Template Engines** that easy to use and develop for Data Engineer.
+**Just a Engine Template Tool** that easy to use and develop for Data Engineer.
 This project support the ETL template for multiple DataFrame engine like
 `PySpark`, `Duckdb`, `Polars`, etc.
 
@@ -12,7 +12,7 @@ This project support the ETL template for multiple DataFrame engine like
 ## 📦 Installation
 
 ```shell
-uv pip install -U detool
+uv pip install -U jett
 ```
 
 **Version Tracking**:
@@ -84,7 +84,7 @@ metric:
 Use by Python API:
 
 ```python
-from detool import Tool
+from jett import Tool
 
 tool = Tool(path="./etl.spark.tool")
 tool.execute(allow_raise=True)
@@ -98,5 +98,5 @@ This project will reference emoji from the [Pipeline Emojis](https://emojidb.org
 
 I do not think this project will go around the world because it has specific propose,
 and you can create by your coding without this project dependency for long term
-solution. So, on this time, you can open [the GitHub issue on this project 🙌](https://github.com/ddeutils/detool/issues)
+solution. So, on this time, you can open [the GitHub issue on this project 🙌](https://github.com/ddeutils/jett/issues)
 for fix bug or request new feature if you want it.

@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from detool.engine.__abc import Result
-from detool.tools import Tool
+from jett.engine.__abc import Result
+from jett.tools import Tool
 
 
 def test_duckdb_csv_to_console(root_path: Path):

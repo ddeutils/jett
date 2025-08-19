@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from detool.engine.__abc import Result
-from detool.tools import Tool
+from jett.engine.__abc import Result
+from jett.tools import Tool
 
 from ...utils import SPARK_DISABLE
 

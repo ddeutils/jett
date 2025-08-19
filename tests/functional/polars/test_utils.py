@@ -1,7 +1,7 @@
 import pytest
 from polars import Field, Float64, Int64, List, Schema, String, Struct
 
-from detool.engine.polars.utils import (
+from jett.engine.polars.utils import (
     extract_cols_selectable,
     extract_cols_without_array,
     schema2struct,

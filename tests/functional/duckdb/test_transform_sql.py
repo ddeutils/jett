@@ -1,7 +1,7 @@
 import duckdb
 import pytest
 
-from detool.engine.duckdb.transform.functions import SQLExecute
+from jett.engine.duckdb.transform.functions import SQLExecute
 
 
 @pytest.fixture(scope="module")

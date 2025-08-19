@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 import yaml
 
-from detool.engine.__abc import BaseEngine
-from detool.utils import (
+from jett.engine.__abc import BaseEngine
+from jett.utils import (
     handle_command,
     is_optional_engine,
     load_yaml,
@@ -18,7 +18,7 @@ from ..utils import filter_updated_and_created
 
 @pytest.fixture(scope="module")
 def mock_yaml_file(root_path: Path):
-    mock_file: Path = root_path / "assets/detool.mock.utils.yaml"
+    mock_file: Path = root_path / "assets/jett.mock.utils.yaml"
     with mock_file.open(mode="w") as f:
         yaml.dump({"foo": "bar"}, f)
 
@@ -28,7 +28,7 @@ def mock_yaml_file(root_path: Path):
 
 
 def test_utils_load_yaml_not_exists(test_path: Path):
-    data = load_yaml(test_path / "assets/detool.not-exists.yaml")
+    data = load_yaml(test_path / "assets/jett.not-exists.yaml")
     assert data == {}
 
 

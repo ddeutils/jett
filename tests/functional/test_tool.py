@@ -1,7 +1,7 @@
 import pytest
 
-from detool.errors import ToolError
-from detool.tools import SparkSubmitTool, Tool
+from jett.errors import ToolError
+from jett.tools import SparkSubmitTool, Tool
 
 
 def test_tool():

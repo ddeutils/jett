@@ -7,7 +7,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from detool.engine.spark.utils import (
+from jett.engine.spark.utils import (
     extract_cols_selectable,
     extract_cols_without_array,
 )

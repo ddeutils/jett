@@ -52,7 +52,7 @@ jobs:
     if: github.event.action == 'released' && startsWith(github.ref, 'refs/tags')
     environment:
       name: pypi
-      url: https://pypi.org/p/detool
+      url: https://pypi.org/p/jett
     needs:
       - release-build
     permissions:
@@ -78,7 +78,7 @@ jobs:
     if: github.event.action == 'prereleased' && startsWith(github.ref, 'refs/tags')
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/detool
+      url: https://test.pypi.org/p/jett
     needs:
       - release-build
     permissions:

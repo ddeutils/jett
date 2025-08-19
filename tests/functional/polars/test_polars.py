@@ -3,7 +3,7 @@ from typing import get_type_hints
 
 import polars as pl
 
-from detool.engine.polars.transform.functions import RenameColumns
+from jett.engine.polars.transform.functions import RenameColumns
 
 
 def test_polars():
