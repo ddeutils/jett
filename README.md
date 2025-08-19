@@ -6,8 +6,8 @@ This project support the ETL template for multiple DataFrame engine like
 
 **Supported Features**:
 
-- Dynamic supported Engines
-- JSON Schema Validation on any IDE.
+- Dynamic Supported Transform Engines via configuration
+- JSON Schema Validation on any IDE
 
 ## 📦 Installation
 

@@ -346,3 +346,7 @@ class SparkSubmitTool(Tool):
             model.submit(context=context)
 
         return Result()
+
+
+class DbtTool(Tool):
+    """DBT Tool."""
