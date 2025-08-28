@@ -1,5 +1,7 @@
 # Testcase
 
+Note for run unittest on the local.
+
 ## Spark
 
 ```shell
@@ -26,4 +28,10 @@ pytest -vv -s ./tests/functional/polars/test_tool.py::test_polars_json_to_consol
 ```shell
 pytest -vv -s ./tests/functional/arrow/test_tool.py::test_arrow_csv_to_console
 pytest -vv -s ./tests/functional/arrow/test_tool.py::test_arrow_json_to_console
+```
+
+## Daft
+
+```shell
+pytest -vv -s ./tests/functional/daft/test_tool.py::test_daft_csv_to_console
 ```
