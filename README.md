@@ -45,6 +45,7 @@ uv pip install -U jett
 > | DuckDB  |   `1.3.2`    |              |
 > | Polars  |   `1.32.0`   |              |
 > | Arrow   |   `21.0.0`   |              |
+> | Daft    |   `0.5.21`   |              |
 
 ## 📝 Usage
 

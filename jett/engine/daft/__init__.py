@@ -1,15 +1,17 @@
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 from daft import DataFrame
 from pydantic import Field
+from pydantic.functional_validators import field_validator
 
 from ... import Result
 from ...__types import DictData
-from ...models import Context, MetricEngine, MetricTransform
+from ...models import ColDetail, Context, MetricEngine, MetricTransform
 from ..__abc import BaseEngine
 from .sink import Sink
 from .source import Source
+from .transform import Transform
 
 logger = logging.getLogger("jett")
 
@@ -20,6 +22,16 @@ class Daft(BaseEngine):
     type: Literal["daft"]
     sink: list[Sink] = Field(description="A list of Sink model.")
     source: Source
+    transforms: list[Transform] = Field(default_factory=list)
+
+    @field_validator(
+        "sink",
+        mode="before",
+        json_schema_input_type=Sink | list[Sink],
+    )
+    def __prepare_sink(cls, data: Any) -> Any:
+        """Prepare the sink field value that should be list of Sink model."""
+        return [data] if not isinstance(data, list) else data
 
     def execute(
         self,
@@ -38,7 +50,13 @@ class Daft(BaseEngine):
         return {"engine": self}
 
     def set_result(self, df: DataFrame, context: Context) -> Result:
-        return Result()
+        return Result(
+            data=[],
+            columns=[
+                ColDetail(name=f.name, dtype=str(f.dtype)) for f in df.schema()
+            ],
+            schema_dict={f.name: f.dtype for f in df.schema()},
+        )
 
     def apply(
         self,
@@ -48,4 +66,6 @@ class Daft(BaseEngine):
         metric: MetricTransform,
         **kwargs,
     ) -> DataFrame:
+        for op in self.transforms:
+            df: DataFrame = op.handle_apply(df, context, engine=engine)
         return df

@@ -47,6 +47,7 @@ class Arrow(BaseEngine):
         engine: DictData,
         metric: MetricEngine,
     ) -> Table:
+        """Execute Arrow engine."""
         logger.info("Start execute with Arrow engine.")
         df: Table = self.source.handle_load(context, engine=engine)
         df: Table = self.handle_apply(df, context, engine=engine)
