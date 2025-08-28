@@ -6,28 +6,14 @@ This project support the ETL template for multiple DataFrame engine like
 
 **Supported Features**:
 
-- Dynamic Supported Transform Engines via configuration
-- JSON Schema Validation on any IDE
+- Dynamic Supported Engines via YAML template
+- JSON Schema Validation support
 
 ## 📦 Installation
 
 ```shell
 uv pip install -U jett
 ```
-
-**Version Tracking**:
-
-| Package |   Version    | Next Support |
-|---------|:------------:|:------------:|
-| Python  |  `3.10.13`   |  `>=3.11.0`  |
-| Spark   |   `3.4.2`    |  `>=4.0.0`   |
-| Hadoop  |     `3`      |     `3`      |
-| Java    | `openjdk@11` | `openjdk@17` |
-| Pyspark |   `3.4.1`    |  `>=4.0.0`   |
-| Scala   |  `2.12.17`   |  `2.12.17`   |
-| DuckDB  |   `1.3.2`    |              |
-| Polars  |   `1.32.0`   |              |
-| Arrow   |   `21.0.0`   |              |
 
 **Engine Supported**:
 
@@ -37,8 +23,24 @@ uv pip install -U jett
 | DuckDB  |   ✅    | DuckDB and Spark API DuckDB                           |
 | Polars  |   ✅    | Polars for Python workload                            |
 | Arrow   |   ✅    | Arrow for Python workflow with Columnar               |
-| Daft    |   ❌    |                                                       |
+| Daft    |   ❌    | Daft for Python distributed workload                  |
 | DBT     |   ❌    | DBT for SQL workload                                  |
+| GX      |   ❌    | Great Expectation for data quality                    |
+
+> [!NOTE]
+> **Version Tracking**:
+>
+> | Package |   Version    | Next Support |
+> |---------|:------------:|:------------:|
+> | Python  |  `3.10.13`   |  `>=3.11.0`  |
+> | Spark   |   `3.4.2`    |  `>=4.0.0`   |
+> | Hadoop  |     `3`      |     `3`      |
+> | Java    | `openjdk@11` | `openjdk@17` |
+> | Pyspark |   `3.4.1`    |  `>=4.0.0`   |
+> | Scala   |  `2.12.17`   |  `2.12.17`   |
+> | DuckDB  |   `1.3.2`    |              |
+> | Polars  |   `1.32.0`   |              |
+> | Arrow   |   `21.0.0`   |              |
 
 ## 📝 Usage
 
