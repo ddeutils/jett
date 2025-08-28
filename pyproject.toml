@@ -17,6 +17,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+airflow = [ "apache-airflow==2.7.3" ]
 spark = [
     "pyarrow==21.0.0",
     "pyspark[connect]==3.4.1",

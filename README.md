@@ -12,6 +12,7 @@ This project support the ETL template for multiple DataFrame engine like
 
 - Dynamic Supported Engines via YAML template
 - JSON Schema Validation support
+- Support Airflow Operator
 
 ## 📦 Installation
 
