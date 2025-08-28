@@ -109,7 +109,7 @@ class Polars(BaseEngine):
         return Result(
             data=[],
             columns=[
-                ColDetail(column=name, dtype=str(dtype))
+                ColDetail(name=name, dtype=str(dtype))
                 for name, dtype in df.schema.items()
             ],
             schema_dict=df.schema,

@@ -20,3 +20,10 @@ pytest -vv -s ./tests/functional/duckdb/test_tool.py::test_duckdb_json_to_consol
 pytest -vv -s ./tests/functional/polars/test_tool.py::test_polars_csv_to_console
 pytest -vv -s ./tests/functional/polars/test_tool.py::test_polars_json_to_console
 ```
+
+## Arrow
+
+```shell
+pytest -vv -s ./tests/functional/arrow/test_tool.py::test_arrow_csv_to_console
+pytest -vv -s ./tests/functional/arrow/test_tool.py::test_arrow_json_to_console
+```

@@ -58,9 +58,7 @@ class DuckDB(BaseEngine):
         schema: pa.Schema = arrow_table.schema
         return Result(
             data=arrow_table.to_pylist(),
-            columns=[
-                ColDetail(column=f.name, dtype=str(f.type)) for f in schema
-            ],
+            columns=[ColDetail(name=f.name, dtype=str(f.type)) for f in schema],
             schema_dict={f.name: f.type for f in schema},
         )
 

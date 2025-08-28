@@ -12,7 +12,6 @@ Metric = Annotated[
     ],
     Field(
         discriminator="type",
-        description="A metric model registry",
+        description="A metric model registry type.",
     ),
 ]
-ListMetric = list[Metric]

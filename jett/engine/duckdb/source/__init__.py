@@ -2,12 +2,12 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
-from .files.local import LocalCSVFile, LocalJsonFile
+from .files.local import LocalCsvFile, LocalJsonFile
 from .files.s3 import S3CSVFile
 
 LocalFile = Annotated[
     Union[
-        LocalCSVFile,
+        LocalCsvFile,
         LocalJsonFile,
     ],
     Field(discriminator="file_format"),

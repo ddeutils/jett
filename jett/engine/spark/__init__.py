@@ -1,7 +1,7 @@
 import logging
 import subprocess
 from collections.abc import Iterator
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, Optional, TypedDict
 
 from pydantic import Field
 from pydantic.functional_validators import model_validator
@@ -226,7 +226,7 @@ class Spark(BaseEngine):
         return Result(
             data=df.collect() if self.enable_collect_result else [],
             columns=[
-                ColDetail(column=f.name, dtype=f.dataType.simpleString())
+                ColDetail(name=f.name, dtype=f.dataType.simpleString())
                 for f in schema
             ],
             schema_dict=df.schema.jsonValue(),

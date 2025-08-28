@@ -2,6 +2,7 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
+from .arrow import Arrow
 from .daft import Daft
 from .dbt import Dbt
 from .duckdb import DuckDB
@@ -10,6 +11,8 @@ from .spark import Spark
 
 Engine = Annotated[
     Union[
+        Arrow,
+        Daft,
         Polars,
         DuckDB,
         Spark,

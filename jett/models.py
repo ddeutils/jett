@@ -19,8 +19,10 @@ class Shape(BaseModel):
     """Shape model for keeping simple log for the Source and Sink metric model.
 
     Examples:
+        Create Shape directly
         >>> Shape(rows=1, columns=2)
 
+        Create Shape from_tuple classmethod.
         >>> Shape.from_tuple((1, 2))
     """
 
@@ -43,7 +45,7 @@ class ColDetail(BaseModel):
     Result model.
     """
 
-    column: str = Field(description="A name of column.")
+    name: str = Field(description="A name of column.")
     dtype: str = Field(description="A data type of column in string format.")
 
 

@@ -10,7 +10,7 @@ from .....models import MetricSource, Shape
 from ....__abc import BaseSource
 
 
-class LocalCSVFile(BaseSource):
+class LocalCsvFile(BaseSource):
     """Local CSV file data source."""
 
     type: Literal["local"]
