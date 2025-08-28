@@ -16,7 +16,8 @@ class BaseDaftTransform(BaseTransform, ABC):
         engine: DictData,
         metric: MetricOperatorOrder,
         **kwargs,
-    ) -> DataFrame: ...
+    ) -> DataFrame:
+        """Apply Transform Operation on the Daft DataFrame object."""
 
     @staticmethod
     def sync_schema(pre: Schema, post: Schema, metric, **kwargs) -> None: ...
