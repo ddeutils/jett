@@ -27,7 +27,7 @@ uv pip install -U jett
 | DuckDB  |   ✅    | DuckDB and Spark API DuckDB                           |
 | Polars  |   ✅    | Polars for Python workload                            |
 | Arrow   |   ✅    | Arrow for Python workflow with Columnar               |
-| Daft    |   ❌    | Daft for Python distributed workload                  |
+| Daft    |   ✅    | Daft for Python distributed workload                  |
 | DBT     |   ❌    | DBT for SQL workload                                  |
 | GX      |   ❌    | Great Expectation for data quality                    |
 
