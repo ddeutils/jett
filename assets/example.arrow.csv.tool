@@ -12,6 +12,9 @@ source:
   header: true
   sample_records: 20
 
+transforms:
+  - op: rename_snakecase
+
 sink:
   - type: console
 
