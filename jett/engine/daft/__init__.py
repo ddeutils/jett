@@ -2,6 +2,7 @@ import logging
 from typing import Literal
 
 from daft import DataFrame
+from pydantic import Field
 
 from ... import Result
 from ...__types import DictData
@@ -14,8 +15,10 @@ logger = logging.getLogger("jett")
 
 
 class Daft(BaseEngine):
+    """Daft Engine Model."""
+
     type: Literal["daft"]
-    sink: list[Sink]
+    sink: list[Sink] = Field(description="A list of Sink model.")
     source: Source
 
     def execute(

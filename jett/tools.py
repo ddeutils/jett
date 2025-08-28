@@ -350,3 +350,14 @@ class SparkSubmitTool(Tool):
 
 class DbtTool(Tool):
     """DBT Tool."""
+
+    profile: ClassVar[str] = "./profile.yml"
+    model_path: ClassVar[str] = "./dbt"
+
+
+class RayTool(Tool):
+    """Ray Tool."""
+
+
+class GxTool(Tool):
+    """Greate Expectation Tool."""

@@ -6,11 +6,11 @@ from typing import Any, Final
 
 
 def env(name: str, module: str, *, default: str | None) -> str | None:
-    return os.getenv(f"YAPT__{module.upper()}__{name}", default)
+    return os.getenv(f"JETT__{module.upper()}__{name}", default)
 
 
 spark_env: partial[str | None] = partial(env, module="SPARK")
-tool_env: partial[str] = partial(os.getenv, "YAPT_ENV", default="test")
+tool_env: partial[str] = partial(os.getenv, "JETT_ENV", default="test")
 
 # NOTE: Compiled regex for environment variable substitution is more performant.
 #   Syntax: ${{ ENV_VAR:default_value }} (default_value is optional)
