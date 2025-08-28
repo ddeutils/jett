@@ -2,6 +2,24 @@
 
 ## Latest Changes
 
+## 0.0.2
+
+### :sparkles: Features
+
+- :dart: daft source and sink of daft engine.
+- :dart: add the first for arrow engine transform.
+- :dart: draft for pyarrow engine.
+- :dart: add first draft for daft support.
+
+### :broom: Deprecate & Clean
+
+- :recycle: add more tool and remove old name.
+
+### :book: Documentations
+
+- :page_facing_up: add bedge on readme file.
+- :page_facing_up: add design docs.
+
 ## 0.0.1
 
 ### :stars: Highlight Features
