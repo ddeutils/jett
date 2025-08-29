@@ -1,13 +1,13 @@
 name: jett
 services:
   airflow:
-    image: airflow-standalone-local
-    container_name: airflow-dev
+    image: airflow-standalone-local-jett
+    container_name: airflow-jett-dev
     build:
       context: ..
       dockerfile: ./.container/Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8080"
     command: [ "airflow", "standalone" ]
     environment:
       AIRFLOW_HOME: "/opt/airflow"

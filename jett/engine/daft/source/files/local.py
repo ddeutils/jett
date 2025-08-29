@@ -1,11 +1,11 @@
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import daft
-from daft import DataFrame
+if TYPE_CHECKING:
+    from daft import DataFrame
 
-from .....__types import DictData
-from .....models import MetricSource, Shape
-from ....__abc import BaseSource
+from jett.__types import DictData
+from jett.engine.__abc import BaseSource
+from jett.models import MetricSource, Shape
 
 
 class LocalJsonFile(BaseSource):
@@ -18,7 +18,9 @@ class LocalJsonFile(BaseSource):
         engine: DictData,
         metric: MetricSource,
         **kwargs,
-    ) -> tuple[DataFrame, Shape]:
+    ) -> tuple["DataFrame", Shape]:
+        import daft
+
         df: DataFrame = daft.read_json(
             path=self.path,
             file_path_column=None,
@@ -41,7 +43,9 @@ class LocalCsvFile(BaseSource):
         engine: DictData,
         metric: MetricSource,
         **kwargs,
-    ) -> tuple[DataFrame, Shape]:
+    ) -> tuple["DataFrame", Shape]:
+        import daft
+
         df: DataFrame = daft.read_csv(
             path=self.path,
             file_path_column=None,

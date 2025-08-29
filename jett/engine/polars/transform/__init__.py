@@ -40,6 +40,7 @@ class Group(BasePolarsTransform):
         )
     )
 
+    # ARCHIVE:
     # @field_validator("transforms", mode="after")
     # def __validate_supported_output_type(
     #     cls,

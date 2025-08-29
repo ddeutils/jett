@@ -1,7 +1,8 @@
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Literal
 
-from daft import DataFrame
+if TYPE_CHECKING:
+    from daft import DataFrame
 
 from ....__types import DictData
 from ....models import Shape
@@ -19,11 +20,11 @@ class Console(BaseSink):
 
     def save(
         self,
-        df: DataFrame,
+        df: "DataFrame",
         *,
         engine: DictData,
         **kwargs,
-    ) -> Any:
+    ) -> tuple["DataFrame", Shape]:
         """Save the result data to the Console."""
         # NOTE: Convert variable from df to table.
         logger.info("🎯 Sink - Start sync with console")

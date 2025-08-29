@@ -59,7 +59,7 @@ class Group(BaseSparkTransform):
         """Apply to Group operator transform.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config

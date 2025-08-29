@@ -5,7 +5,7 @@ from typing import Final
 import polars as pl
 from polars import Array, Expr, Field, List, Schema, Struct
 
-from ...utils import is_snake_case
+from jett.utils import is_snake_case
 
 ALLOW_VALIDATE_PATTERNS: Final[tuple[str, ...]] = (
     "non_snake_case",
@@ -242,6 +242,9 @@ def extract_cols_without_array(schema: Schema) -> list[str]:
 def col_path(path: str) -> Expr:
     """Convert a dotted path notation to polars column expression supports also
     list access
+
+    Args:
+        path (str): A column path.
 
     Examples:
         >>> col_path('a[5].b')

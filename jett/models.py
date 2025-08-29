@@ -11,8 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import NotRequired, Self
 
-from .__types import DictData
-from .utils import get_dt_latest, get_dt_now
+from jett.__types import DictData
+from jett.utils import get_dt_latest, get_dt_now
 
 
 class Shape(BaseModel):

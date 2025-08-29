@@ -1,7 +1,9 @@
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-from polars import DataFrame
+if TYPE_CHECKING:
+    from polars import DataFrame
+
 from pydantic import Field
 from pydantic.functional_validators import field_validator
 
@@ -37,7 +39,7 @@ class Polars(BaseEngine):
         context: Context,
         engine: DictData,
         metric: MetricEngine,
-    ) -> DataFrame:
+    ) -> "DataFrame":
         """Execute Polars engine method.
 
         Args:
@@ -70,12 +72,12 @@ class Polars(BaseEngine):
 
     def apply(
         self,
-        df: DataFrame,
+        df: "DataFrame",
         context: Context,
         engine: DictData,
         metric: MetricTransform,
         **kwargs,
-    ) -> DataFrame:
+    ) -> "DataFrame":
         """Apply Polars engine transformation to the source. This method
         will apply all operators.
 
@@ -96,7 +98,7 @@ class Polars(BaseEngine):
             df: DataFrame = t.handle_apply(df, context, engine=engine)
         return df
 
-    def set_result(self, df: DataFrame, context: Context) -> Result:
+    def set_result(self, df: "DataFrame", context: Context) -> Result:
         """Set the Result object from executed Polars DataFrame.
 
         Args:

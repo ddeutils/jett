@@ -1,7 +1,8 @@
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-import duckdb
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation
 
 from ....__types import DictData
 from ....models import Shape
@@ -19,7 +20,7 @@ class Console(BaseSink):
 
     def save(
         self,
-        df: duckdb.DuckDBPyRelation,
+        df: "DuckDBPyRelation",
         *,
         engine: DictData,
         **kwargs,

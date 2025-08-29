@@ -4,7 +4,7 @@
 [![python support version](https://img.shields.io/pypi/pyversions/jett)](https://pypi.org/project/jett/)
 [![size](https://img.shields.io/github/languages/code-size/ddeutils/jett)](https://github.com/ddeutils/jett)
 
-**Just a Engine Template Tool** that easy to use and develop for Data Engineer.
+**Just an Engine Template Tool** that easy to use and develop for Data Engineer.
 This project support the ETL template for multiple DataFrame engine like
 `PySpark`, `Duckdb`, `Polars`, etc.
 

@@ -1,7 +1,10 @@
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import duckdb
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation
+
+
 from pydantic import Field
 
 from .....__types import DictData
@@ -21,8 +24,10 @@ class S3CSVFile(BaseSource):
 
     def load(
         self, engine: DictData, **kwargs
-    ) -> tuple[duckdb.DuckDBPyRelation, Shape]:
+    ) -> tuple["DuckDBPyRelation", Shape]:
         """Load CSV file to DuckDB Relation object."""
+        import duckdb
+
         file_format: str = Path(self.path).suffix
         if file_format not in (".csv",):
             raise NotImplementedError(

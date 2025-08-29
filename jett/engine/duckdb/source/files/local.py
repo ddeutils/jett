@@ -1,8 +1,9 @@
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import duckdb
-from duckdb import DuckDBPyRelation
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation
+
 from pydantic import Field
 
 from .....__types import DictData
@@ -22,8 +23,10 @@ class LocalCsvFile(BaseSource):
 
     def load(
         self, engine: DictData, metric: MetricSource, **kwargs
-    ) -> tuple[DuckDBPyRelation, Shape]:
+    ) -> tuple["DuckDBPyRelation", Shape]:
         """Load CSV file to DuckDB Relation object."""
+        import duckdb
+
         file_format: str = Path(self.path).suffix
         if file_format not in (".csv",):
             raise NotImplementedError(
@@ -51,7 +54,9 @@ class LocalJsonFile(BaseSource):
 
     def load(
         self, engine: DictData, metric: MetricSource, **kwargs
-    ) -> tuple[DuckDBPyRelation, Shape]:
+    ) -> tuple["DuckDBPyRelation", Shape]:
+        import duckdb
+
         file_format: str = Path(self.path).suffix
         if file_format not in (".json",):
             raise NotImplementedError(

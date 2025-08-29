@@ -1,7 +1,8 @@
 import logging
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from daft import DataFrame
+if TYPE_CHECKING:
+    from daft import DataFrame
 
 from ....__types import DictData
 from ....utils import to_snake_case
@@ -15,7 +16,7 @@ class RenameSnakeCase(BaseDaftTransform):
 
     op: Literal["rename_snakecase"]
 
-    def apply(self, df: DataFrame, engine: DictData, **kwargs) -> DataFrame:
+    def apply(self, df: "DataFrame", engine: DictData, **kwargs) -> "DataFrame":
         """Apply to Rename Columns to Snake case."""
         old_cols = df.column_names
         new_cols: dict[str, str] = {}

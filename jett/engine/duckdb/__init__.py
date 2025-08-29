@@ -1,10 +1,11 @@
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-import duckdb
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation as Relation
+    from duckdb.experimental.spark.sql import SparkSession
+
 import pyarrow as pa
-from duckdb import DuckDBPyRelation as Relation
-from duckdb.experimental.spark.sql import SparkSession
 from pydantic import Field
 
 from ...__types import DictData
@@ -48,7 +49,7 @@ class DuckDB(BaseEngine):
         self.sink.handle_save(df, context, engine=engine)
         return df
 
-    def set_result(self, df: Relation, context: Context) -> Result:
+    def set_result(self, df: "Relation", context: Context) -> Result:
         """Set the Result object for this DuckDB engine.
 
         Returns:
@@ -64,12 +65,12 @@ class DuckDB(BaseEngine):
 
     def apply(
         self,
-        df: Relation,
+        df: "Relation",
         context: DictData,
         engine: DictData,
         metric: MetricTransform,
         **kwargs,
-    ) -> Relation:
+    ) -> "Relation":
         """Apply transform to the source.
 
         Args:
@@ -78,6 +79,8 @@ class DuckDB(BaseEngine):
             engine:
             metric:
         """
+        import duckdb
+
         priority: ListTransform = []
         groups: ListTransform = []
         fallback: ListTransform = []

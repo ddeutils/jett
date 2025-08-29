@@ -5,8 +5,8 @@ import shutil
 from pyspark.sql import DataFrame
 from pyspark.sql.types import StringType, StructField, StructType
 
-from ...conf import spark_env
-from ...utils import get_random_str
+from jett.utils import get_random_str, spark_env
+
 from .__types import AnySparkSession
 from .utils import is_remote_session
 

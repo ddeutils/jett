@@ -8,13 +8,13 @@ from pyspark.sql import DataFrame, Row, SparkSession
 from typing_extensions import Self
 
 from .....__types import DictData
-from .....conf import spark_env
 from .....models import MetricSink
 from .....utils import (
     clean_string,
     dt2str,
     format_bytes_humanreadable,
     regex_by_group,
+    spark_env,
 )
 from ....__abc import BaseSink, Shape
 from ...utils import (
