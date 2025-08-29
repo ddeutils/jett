@@ -1,8 +1,12 @@
 import logging
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:
+try:
     from daft import DataFrame
+
+    DAFT_EXISTS: bool = True
+except ImportError:
+    DAFT_EXISTS: bool = False
 
 from ....__types import DictData
 from ....models import Shape

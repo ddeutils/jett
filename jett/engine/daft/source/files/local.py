@@ -1,7 +1,12 @@
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-if TYPE_CHECKING:
+try:
+    import daft
     from daft import DataFrame
+
+    DAFT_EXISTS: bool = True
+except ImportError:
+    DAFT_EXISTS: bool = False
 
 from jett.__types import DictData
 from jett.engine.__abc import BaseSource
@@ -44,7 +49,8 @@ class LocalCsvFile(BaseSource):
         metric: MetricSource,
         **kwargs,
     ) -> tuple["DataFrame", Shape]:
-        import daft
+        if not DAFT_EXISTS:
+            raise ModuleNotFoundError("Does not install daft yet.")
 
         df: DataFrame = daft.read_csv(
             path=self.path,
