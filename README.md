@@ -11,8 +11,8 @@ This project support the ETL template for multiple DataFrame engine like
 **Supported Features**:
 
 - Dynamic Supported Engines via YAML template
-- JSON Schema Validation support
-- Support Airflow Operator
+- JSON Schema Validation
+- Plugin Airflow Operator
 
 ## 📦 Installation
 
@@ -31,6 +31,10 @@ uv pip install -U jett
 | Daft    |   ✅    | Daft for Python distributed workload                  |
 | DBT     |   ❌    | DBT for SQL workload                                  |
 | GX      |   ❌    | Great Expectation for data quality                    |
+
+> [!WARNING]
+> This project will focus on the Arrow engine first because it is the base lib
+> for most DataFrame libs.
 
 > [!NOTE]
 > **Version Tracking**:
@@ -73,11 +77,11 @@ transforms:
       - op: expr
         sql: "CAST(id AS string)"
 
-# 3) 🎯 Sink result to target
+# 3) 🎯 Sink result to target (multi-sink supported)
 sink:
-  type: local
-  file_type: google_sheet
-  path: ./assets/landing/customer.gsheet
+  - type: local
+    file_type: google_sheet
+    path: ./assets/landing/customer.gsheet
 
 # 4) 📩 Metric that will send after execution.
 metric:
