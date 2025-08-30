@@ -23,8 +23,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 ARG SPARK_VERSION=3.4.1
 ARG SPARK_ARCHIVE=spark-${SPARK_VERSION}-bin-hadoop3
 
-# NOTE: Install Spark
-RUN echo "installing Spark version ${SPARK_VERSION}"
+# NOTE: Install Apache Spark
 RUN wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/${SPARK_ARCHIVE}.tgz \
     && tar -xvf ${SPARK_ARCHIVE}.tgz -C /opt && rm -f ${SPARK_ARCHIVE}.tgz  \
     && ln -s ${SPARK_ARCHIVE} /opt/spark
@@ -34,17 +33,15 @@ ENV SPARK_HOME=/opt/spark
 ENV HADOOP_HOME=/opt/spark
 ENV PYSPARK_DRIVER_PYTHON=/opt/venv/bin/python
 
+# NOTE: Install Apache Airflow
 # WARNING: Install pendulum first because Airflow version 2.7 does not compatible
 #   if it more than 3.0.0
-# RUN uv pip install "pendulum<3.0.0" && \
-#     uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
-#       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt" \
-RUN uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
-      --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
+RUN uv pip install "pendulum<3.0.0" \
+    && uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
+       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
 # NOTE: Force change version of necessary version of deps package for DAG Tool.
 RUN uv pip install \
-      "PyYAML==6.0.2" \
       "python-dotenv==1.1.1" \
       "click==8.1.8" \
       "ddeutil-io[yaml,toml]==0.2.17"

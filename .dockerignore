@@ -1,0 +1,16 @@
+.container/
+.git/
+.github/
+.venv/
+docs/
+dags/
+logs/
+tests/
+.gitattributes
+.gitignore
+.python-version
+.pre-commit-config.yaml
+.env
+Makefile
+json-schema.json
+uv.lock

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 try:
@@ -23,7 +25,7 @@ class LocalJsonFile(BaseSource):
         engine: DictData,
         metric: MetricSource,
         **kwargs,
-    ) -> tuple["DataFrame", Shape]:
+    ) -> tuple[DataFrame, Shape]:
         import daft
 
         df: DataFrame = daft.read_json(
@@ -48,7 +50,7 @@ class LocalCsvFile(BaseSource):
         engine: DictData,
         metric: MetricSource,
         **kwargs,
-    ) -> tuple["DataFrame", Shape]:
+    ) -> tuple[DataFrame, Shape]:
         if not DAFT_EXISTS:
             raise ModuleNotFoundError("Does not install daft yet.")
 

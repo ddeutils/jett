@@ -6,6 +6,10 @@ services:
     build:
       context: ..
       dockerfile: ./.container/Dockerfile
+      args:
+        AIRFLOW_VERSION: ${AIRFLOW_VERSION:-2.9.2}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.10}
+        SPARK_VERSION: ${SPARK_VERSION:-3.4.1}
     ports:
       - "8081:8080"
     command: [ "airflow", "standalone" ]
