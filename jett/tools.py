@@ -32,7 +32,7 @@ class ToolModel(BaseModel):
         from_dict: Construct Tool model with a dict object.
 
     Methods:
-        fetch:
+        fetch: Revalidate model from the current config data.
     """
 
     model: Engine = Field(
@@ -117,6 +117,10 @@ class Tool:
         c (ToolModel): A Tool model that include the `model` and `data` fields.
         _path (str | Path, default None):
         _config (DictData, default None):
+
+    Methods:
+        refresh: Refresh the config argument with reload again from config path
+            or config dict object.
     """
 
     @overload
@@ -152,14 +156,22 @@ class Tool:
 
         self._path: StrOrPath | None = path
         self._config: DictData | None = config
+        # NOTE: Start pre-init.
+        self.pre_init()
+
         self.c: ToolModel = (
             ToolModel.from_yaml(path) if path else ToolModel.from_dict(config)
         )
+
+        # NOTE: Start post-init.
         self.post_init()
 
     def __str__(self) -> str:
         """Override the `__str__` dunder method."""
         return f"Tool Engine: {self.c.model.type}"
+
+    def pre_init(self) -> None:
+        """Pre initialize method for calling after this tool have initialed."""
 
     def post_init(self) -> None:
         """Post initialize method for calling after this tool have initialed."""
@@ -287,16 +299,29 @@ class SparkSubmitTool(Tool):
                 f"{self.c.model.type!r}"
             )
 
+        # NOTE: Force update type if it is `spark`.
+        self.c.model.type = "spark-submit"
+        self.c.data["type"] = "spark-submit"
+
     def set_conf_files(self, temp_path: Path) -> None:
-        """Add Tool yaml file in `spark-submit --files`"""
-        file: str = f"file://{temp_path.absolute()}/{self.yaml_filename}"
-        logger.info(f"config file path: {file}")
+        """Update Tool YAML filepath in the `spark-submit --files` command line
+        statement.
+
+        Args:
+            temp_path (Path): A temp path.
+        """
+        file: str = f"file://{(temp_path / self.yaml_filename).absolute()}"
+        logger.info(f"Add config files path: {file}")
         files = self.c.data.get("files", [])
         files.append(file)
         self.c.data["files"] = files
 
     def set_conf_entrypoint(self, temp_path: Path) -> None:
-        """Write entrypoint of program and set entrypoint for spark-submit."""
+        """Write entrypoint of program and set entrypoint for spark-submit.
+
+        Args:
+            temp_path (Path): A temp path.
+        """
         filepath = f"{temp_path}/{self.yaml_filename}"
         write_yaml(filepath, data=self.c.data)
 
@@ -330,7 +355,7 @@ class SparkSubmitTool(Tool):
                 model.
 
         Returns:
-            Result: An empty result.
+            Result: An empty result object.
         """
         from .engine.spark import SparkSubmit
 

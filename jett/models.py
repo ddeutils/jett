@@ -1,5 +1,5 @@
-"""Model modules keep all necessary models that use for each engine, metric, and
-convertor.
+"""Base Model modules keep all necessary models that use for each engine,
+metric, and convertor.
 """
 
 from __future__ import annotations
@@ -45,6 +45,9 @@ class Shape(BaseModel):
 class ColDetail(BaseModel):
     """A shared data structure of column detail that should be use only in
     Result model.
+
+    Examples:
+        >>> ColDetail(name="id", dtype="integer")
     """
 
     name: str = Field(description="A name of column.")
@@ -52,7 +55,15 @@ class ColDetail(BaseModel):
 
 
 class Result(BaseModel):
-    """A shared data structure of result of YAPT workflow."""
+    """A shared data structure of result of Jett tool. This model will use to be
+    an output from tool execution step.
+
+    Examples:
+        >>> Result(
+        ...     data=[{"id": 1}, {"id": 2}],
+        ...     columns=[ColDetail(name="id", dtype="integer")],
+        ... )
+    """
 
     data: list[Any] = Field(
         default_factory=list,
@@ -75,13 +86,17 @@ ONLY_SUCCESS = EmitCond.ONLY_SUCCESS
 ONLY_FAILED = EmitCond.ONLY_FAILED
 
 
+Operation = Literal[">", ">=", "<", "<=", "=", "!="]
+
+
 class BasicFilter(BaseModel):
     """A Configuration Model for Basic Filter."""
 
     col: str = Field(description="A column name.")
-    op: str = Field(
+    op: Operation = Field(
         description=(
-            "An operation type for filtering, an operator e.g. >, >=, <, <=, ="
+            "An operation type for filtering, an operator e.g. >, >=, <, <=, "
+            "or =."
         )
     )
     value: str | None = Field(
@@ -118,7 +133,7 @@ class BasicFilter(BaseModel):
         )
 
 
-class SubMetricData(BaseModel):
+class BaseMetricData(BaseModel):
     """Base Metric class for any inheritance class of metric data.
 
     Methods:
@@ -160,7 +175,7 @@ class SubMetricData(BaseModel):
         return self
 
 
-class MetricSource(SubMetricData):
+class MetricSource(BaseMetricData):
     """Metric Source model."""
 
     type: str | None = None
@@ -169,7 +184,7 @@ class MetricSource(SubMetricData):
     inlet: tuple[str, str] | None = None
 
 
-class MetricOperator(SubMetricData):
+class MetricOperator(BaseMetricData):
     """Metric Operator model."""
 
     type: Literal["order"]
@@ -183,7 +198,7 @@ class MetricOperatorOrder(MetricOperator):
     transform_post: dict[str, Any] = Field(default_factory=dict)
 
 
-class MetricOperatorGroup(SubMetricData):
+class MetricOperatorGroup(BaseMetricData):
     """Metric Operator Transform group model."""
 
     type: Literal["group"]
@@ -205,14 +220,14 @@ MetricOperatorTransform = Annotated[
 ]
 
 
-class MetricTransform(SubMetricData):
+class MetricTransform(BaseMetricData):
     transforms: list[MetricOperatorTransform] = Field(
         default_factory=list,
         description="List of transform operator metric.",
     )
 
 
-class MetricSink(SubMetricData):
+class MetricSink(BaseMetricData):
     destination: str = ""
     write_row_count: int = 0
     write_column_count: int = 0
@@ -224,7 +239,7 @@ class MetricSink(SubMetricData):
     )
 
 
-class MetricEngine(SubMetricData):
+class MetricEngine(BaseMetricData):
     app_id: str | None = Field(
         default=None,
         description="An application ID that use on this engine session.",
@@ -271,7 +286,7 @@ class MetricData(BaseModel):
 
 
 class Context(TypedDict, total=False):
-    """Context dict type for pre-validate."""
+    """Context dict type for pre-validate for Jett tool execution."""
 
     # NOTE: Before execute
     author: str | None

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 from typing import Literal
@@ -12,9 +14,11 @@ logger = logging.getLogger("jett")
 
 
 class Console(BaseMetric):
-    """Console Metric model."""
+    """Console Metric model that use to emit metric to logging with a specific
+    logging name.
+    """
 
-    type: Literal["console"]
+    type: Literal["console"] = Field(description="A type of console metric.")
     name: str = Field(default="jett", description="A logging name.")
 
     def emit(self, data: MetricData, convert: DictData, **kwargs) -> None:

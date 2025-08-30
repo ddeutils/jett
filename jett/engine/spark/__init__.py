@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import logging
 import subprocess
 from collections.abc import Iterator
-from typing import Any, Literal, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from pydantic import Field
 from pydantic.functional_validators import model_validator
-from pyspark.sql import Column, DataFrame, SparkSession
-from pyspark.sql.types import StructType
 from typing_extensions import Self
 
 from ...__about__ import __version__
@@ -40,12 +40,18 @@ from .utils import (
     yarn_kill,
 )
 
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.types import StructType
+
 logger = logging.getLogger("jett")
 
 
 class EngineContext(TypedDict):
+    """Engine Context dict typed for Spark engine execution."""
+
     spark: SparkSession
-    engine: "Spark"
+    engine: Spark
     temp_storage: dict[str, Any]
 
 
@@ -54,17 +60,23 @@ class Spark(BaseEngine):
     current context.
     """
 
-    type: Literal["spark"]
-    app_name: str | None = None
-    enable_collect_result: bool = False
+    type: Literal["spark"] = Field(description="A type of spark engine.")
+    app_name: str | None = Field(
+        default=None, description="An application name."
+    )
+    enable_collect_result: bool = Field(
+        default=False,
+        description=(
+            "A flag that use for enable collect data from LazyFrame after the "
+            "execution done."
+        ),
+    )
     source: Source = Field(description="A source model.")
     sink: Sink = Field(description="A sink model.")
     transforms: list[Transform] = Field(
         default_factory=list,
         description="A list of transform model.",
     )
-
-    # NOTE: Spark configuration fields.
     master: str | None = None
     remote: str | None = None
     deploy_mode: Literal["cluster"] = "cluster"
@@ -81,9 +93,7 @@ class Spark(BaseEngine):
     enable_hive_support: bool = False
     conf: dict[str, PrimitiveType | None] = Field(default_factory=dict)
 
-    # NOTE: Main fields
-
-    def __validate_master_and_remote(self) -> None:
+    def _validate_master_and_remote(self) -> None:
         """Validate master and remote fields.
 
         Raises:
@@ -98,9 +108,9 @@ class Spark(BaseEngine):
             )
 
     @model_validator(mode="after")
-    def __validate_after(self) -> Self:
+    def validate_after(self) -> Self:
         """Validate Spark engine after mode."""
-        self.__validate_master_and_remote()
+        self._validate_master_and_remote()
         return self
 
     def session(self, context: Context, **kwargs) -> SparkSession:
@@ -115,6 +125,8 @@ class Spark(BaseEngine):
         Returns:
             SparkSession: return spark session.
         """
+        from pyspark.sql import SparkSession
+
         _ = kwargs
         builder = SparkSession.builder
         if self.master:
@@ -400,9 +412,11 @@ class Spark(BaseEngine):
 
 
 class SparkSubmit(Spark):
-    """Spark Submit Engine."""
+    """Spark Submit Engine model."""
 
-    type: Literal["spark-submit"]
+    type: Literal["spark-submit"] = Field(
+        description="A type of spark submit engine."
+    )
     entrypoint: str = Field(
         description="An entrypoint of the Spark submit command.",
     )
@@ -412,14 +426,17 @@ class SparkSubmit(Spark):
     queue: str | None = None
     keytab_path: str | None = None
     keytab_principal: str | None = None
-    yarn_app_id: str | None = None
+    yarn_app_id: str | None = Field(
+        default=None,
+        description="A YARN application ID after submit the Spark application.",
+    )
 
     @model_validator(mode="after")
-    def __validate_after(self) -> Self:
+    def validate_after(self) -> Self:
         """Inherit after validation from Spark engine model for checking master
         field value that allow to use this Spark submit engine.
         """
-        self.__validate_master_and_remote()
+        self._validate_master_and_remote()
         if self.master and self.master.startswith("local"):
             raise ValueError("Spark Submit does not support for local master.")
         return self
@@ -499,17 +516,17 @@ class SparkSubmit(Spark):
         Args:
             logs (Iterator[str]): A yield of log statement.
         """
-        _already_log_yarn_url: bool = False
-        _states: list[str] = []
+        already_log_yarn_url: bool = False
+        states: list[str] = []
         for log in logs:
             log = log.strip()
             if self.show_all_spark_submit_log:
                 logger.info(log)
             else:
                 state: str = regex_by_group(log, regex=r"state:\s+(.+?)\)", n=1)
-                if state not in _states and state != "":
+                if state not in states and state != "":
                     logger.info("application state: %s", state)
-                    _states.append(state)
+                    states.append(state)
 
             if self.master != "yarn" or self.deploy_mode != "cluster":
                 continue
@@ -523,10 +540,10 @@ class SparkSubmit(Spark):
 
             if "tracking URL:" in log:
                 _yarn_url: str = log.replace("tracking URL:", "").strip()
-                if not _already_log_yarn_url:
+                if not already_log_yarn_url:
                     logger.info(f"YARN app id: {self.yarn_app_id}")
                     logger.info(f"YARN app tracking url: {_yarn_url}")
-                    _already_log_yarn_url = True
+                    already_log_yarn_url = True
 
     def submit(self, context: Context) -> None:
         """Submit Spark application to YARN.
@@ -573,6 +590,11 @@ class SparkSubmit(Spark):
         engine: DictData,
         **kwargs,
     ) -> DataFrame:
+        """Apply Spark engine transformation to the source. This method will
+        apply all operators by priority.
+
+            This engine does not allow to use apply method.
+        """
         raise NotImplementedError(
             "Spark Submit Engine does not support apply transform."
         )
