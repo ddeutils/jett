@@ -24,10 +24,10 @@ RUN uv pip install -U pip \
     && uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
-# NOTE: Force change version of necessary version of deps package for DAG Tool.
-#   - pydantic: use minimum version for testing on local.
+# NOTE: Force change version of necessary version of deps package for Jett Tool.
 RUN uv pip install \
-      "pydantic==2.9.2"
+      "pydantic==2.9.2" \
+      "pyarrow==21.0.0"
 
 COPY . .
 

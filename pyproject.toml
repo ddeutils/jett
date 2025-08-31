@@ -8,12 +8,11 @@ description = "just an engine template tool"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "python-dotenv==1.1.1",
-    "pydantic==2.11.7",
-    "click==8.1.8",
-    "ddeutil-io[yaml,toml]==0.2.17",
-    "requests==2.32.4",
-    "pyarrow==21.0.0",
+    "pydantic>=2.9.2",
+    "click>=8.0.0",
+    "ddeutil-io[yaml,toml]>=0.2.17",
+    "requests>=2.30.0",
+    "pyarrow>=21.0.0,<22.0.0",
     "python-dateutil",
 ]
 dynamic = ["version"]
@@ -25,6 +24,7 @@ duckdb = [ "duckdb==1.3.2" ]
 polars = [ "polars==1.32.0", "pyiceberg==0.9.1" ]
 daft = [ "daft==0.5.21" ]
 dev = [
+    "python-dotenv==1.1.1",
     "clishelf>=0.2.22",
     "pre-commit>=4.0.0",
     "pytest>=8.4.0",
