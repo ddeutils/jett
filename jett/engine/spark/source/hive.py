@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic.functional_validators import field_validator, model_validator
-from pyspark.sql import SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from ....__types import DictData
 from ....models import BasicFilter, Shape

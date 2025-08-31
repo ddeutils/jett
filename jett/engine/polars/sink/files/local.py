@@ -1,10 +1,14 @@
-from pathlib import Path
-from typing import Literal
+from __future__ import annotations
 
-from polars import DataFrame
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
+
 from pydantic import Field
 
 from jett.engine.__abc import BaseSink
+
+if TYPE_CHECKING:
+    from polars import DataFrame
 
 
 class LocalCSVFile(BaseSink):

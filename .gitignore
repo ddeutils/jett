@@ -216,3 +216,4 @@ spark-warehouse/
 
 # Airflow
 logs/
+.backup/

@@ -1,12 +1,21 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
-from duckdb.experimental.spark.sql.types import StructType
 from pydantic import Field
-from pyspark.sql import Column, DataFrame, SparkSession
-from pyspark.sql.connect.column import Column as ColumnRemote
-from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.column import Column as ColumnRemote
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+    from pyspark.sql.types import StructType
+
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
+    AnyApplyGroupOutput = PairCol | list[PairCol]
+    AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
 
 from ....__types import DictData
 from ....errors import ToolTransformError
@@ -18,11 +27,7 @@ from ....models import (
 )
 from ....utils import sort_non_sensitive_str
 from ...__abc import BaseTransform
-from ..__types import AnyDataFrame, PairCol
 from ..utils import extract_cols_without_array, schema2dict
-
-AnyApplyGroupOutput = PairCol | list[PairCol]
-AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
 
 logger = logging.getLogger("jett")
 

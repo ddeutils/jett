@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import json
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pyspark.sql import SparkSession
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from .utils import is_remote_session
 

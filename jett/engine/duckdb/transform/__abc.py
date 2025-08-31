@@ -1,16 +1,20 @@
+from __future__ import annotations
+
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Literal
-
-from duckdb import DuckDBPyRelation as Relation
-from duckdb.experimental.spark.sql import DataFrame, SparkSession
-from duckdb.experimental.spark.sql.column import Column
+from typing import TYPE_CHECKING, Any, Literal
 
 from ....__types import DictData
 from ....models import Context, MetricOperator
 from ...__abc import BaseTransform
-from ..__types import PairCol
+
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation as Relation
+    from duckdb.experimental.spark.sql import DataFrame, SparkSession
+    from duckdb.experimental.spark.sql.column import Column
+
+    PairCol = tuple[Column, str]
 
 logger = logging.getLogger("jett")
 

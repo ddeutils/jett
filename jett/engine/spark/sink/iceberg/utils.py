@@ -1,21 +1,23 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from dateutil.relativedelta import relativedelta
-from pyspark.sql import DataFrame, Row, SparkSession
-from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
-from pyspark.sql.types import (
-    ArrayType,
-    DataType,
-    DecimalType,
-    DoubleType,
-    FloatType,
-    IntegerType,
-    LongType,
-    StructField,
-    StructType,
-)
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, Row, SparkSession
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
+    from pyspark.sql.types import (
+        ArrayType,
+        DataType,
+        StructField,
+        StructType,
+    )
+
+    AnyType = StructType | ArrayType | StructField | DataType
+    Changed = dict[str, str | AnyType | list[str]]
 
 from .....utils import regex_by_group
 from ...utils import ENUM_EXTRACT_ARRAY_TYPE
@@ -57,8 +59,6 @@ DEFAULT_TABLE_PROPERTY: Final[dict[str, str]] = {
 }
 SPARK_TEMP_VIEW_NAME: Final[str] = "tool_temp_table"
 
-AnyType = StructType | ArrayType | StructField | DataType
-Changed = dict[str, str | AnyType | list[str]]
 ListStr = list[str]
 
 
@@ -312,6 +312,14 @@ def is_column_safe_to_alter(
     References:
         - https://iceberg.apache.org/docs/latest/spark-ddl/#alter-table-alter-column
     """
+    from pyspark.sql.types import (
+        DecimalType,
+        DoubleType,
+        FloatType,
+        IntegerType,
+        LongType,
+    )
+
     if current_dtype.__class__ != to_be_dtype.__class__:
         return False
 

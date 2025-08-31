@@ -1,15 +1,16 @@
-"""Local File System source module."""
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import polars as pl
-from polars import DataFrame
 from pydantic import Field
 
 from .....__types import DictData
 from .....models import Shape
 from ....__abc import BaseSource
+
+if TYPE_CHECKING:
+    from polars import DataFrame
 
 
 class LocalCSVFile(BaseSource):
@@ -24,6 +25,8 @@ class LocalCSVFile(BaseSource):
 
     def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
         """Load CSV file to DuckDB Relation object."""
+        import polars as pl
+
         file_format: str = Path(self.path).suffix
         if file_format not in (".csv",):
             raise NotImplementedError(
@@ -50,6 +53,8 @@ class LocalJsonFile(BaseSource):
 
     def load(self, engine: DictData, **kwargs) -> tuple[DataFrame, Shape]:
         """Load JSON file from local file system."""
+        import polars as pl
+
         file_format: str = Path(self.path).suffix
         if file_format not in (".json",):
             raise NotImplementedError(

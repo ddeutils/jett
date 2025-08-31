@@ -1,28 +1,36 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import polars as pl
-from polars import DataFrame, DataType, Schema
-from polars import Expr as Column
 from pydantic import BaseModel, Field
 
 from ....__types import DictData
 from ....models import Context, MetricOperatorOrder, MetricOperatorTransform
 from ...__abc import BaseTransform
 
+if TYPE_CHECKING:
+    from polars import DataFrame, DataType, Schema
+    from polars import Expr as Column
+
+    PairCol = tuple[Column, str]
+    AnyApplyGroupOutput = PairCol | list[PairCol]
+    AnyApplyOutput = AnyApplyGroupOutput | DataFrame
+
 logger = logging.getLogger("jett")
 
-PairCol = tuple[Column, str]
-AnyApplyGroupOutput = PairCol | list[PairCol]
-AnyApplyOutput = AnyApplyGroupOutput | DataFrame
-DTYPES: dict[str, type[DataType]] = {
-    "string": pl.String,
-    "boolean": pl.Boolean,
-    # "integer": ...,
-    # "double": ...,
-    # "timestamp": ...,
-}
+
+def get_map_dtypes() -> dict[str, type[DataType]]:
+    import polars as pl
+
+    return {
+        "string": pl.String,
+        "boolean": pl.Boolean,
+        # "integer": ...,
+        # "double": ...,
+        # "timestamp": ...,
+    }
 
 
 def is_pair_expr(value: PairCol | Any) -> bool:

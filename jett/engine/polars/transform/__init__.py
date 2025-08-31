@@ -1,14 +1,15 @@
-import logging
-from typing import Annotated, Any, Literal, Union, get_type_hints
+from __future__ import annotations
 
-from polars import DataFrame, Expr, Schema
+import logging
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Union, get_type_hints
+
 from pydantic import Field
 from pydantic.functional_validators import field_validator
 
 from ....__types import DictData
 from ....errors import ToolTransformError
 from ....models import Context, MetricOperatorGroup, MetricOperatorOrder
-from .__abc import BasePolarsTransform, PairCol, is_pair_expr
+from .__abc import BasePolarsTransform, is_pair_expr
 from .functions import (
     ExplodeArrayColumn,
     FlattenAllExceptArray,
@@ -17,6 +18,12 @@ from .functions import (
     Sql,
 )
 from .functions import Expr as ExprTransform
+
+if TYPE_CHECKING:
+    from polars import DataFrame, Schema
+    from polars import Expr as Column
+
+    PairCol = tuple[Column, str]
 
 logger = logging.getLogger("jett")
 
@@ -85,7 +92,7 @@ class Group(BasePolarsTransform):
         Returns:
 
         """
-        maps: dict[str, Expr] = {}
+        maps: dict[str, Column] = {}
         for t in self.transforms:
             metric_order = MetricOperatorOrder(type="order", trans_op=t.op)
             metric.transforms.append(metric_order)
@@ -96,11 +103,11 @@ class Group(BasePolarsTransform):
 
                 # VALIDATE: Check the result type that match on the group operator.
                 if is_pair_expr(output):
-                    rs: dict[str, Expr] = {output[1]: output[0]}
+                    rs: dict[str, Column] = {output[1]: output[0]}
                 elif isinstance(output, list) and all(
                     is_pair_expr(i) for i in output
                 ):
-                    rs: dict[str, Expr] = {p[1]: p[0] for p in output}
+                    rs: dict[str, Column] = {p[1]: p[0] for p in output}
                 else:
                     raise ToolTransformError(
                         "Group on Spark engine should return the apply"

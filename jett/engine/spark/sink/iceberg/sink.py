@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import logging
 import re
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field
 from pydantic.functional_validators import field_validator, model_validator
-from pyspark.sql import DataFrame, Row, SparkSession
 from typing_extensions import Self
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, Row, SparkSession
 
 from .....__types import DictData
 from .....models import MetricSink

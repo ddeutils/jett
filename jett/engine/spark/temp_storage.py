@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import logging
 import os
 import shutil
+from typing import TYPE_CHECKING
 
-from pyspark.sql import DataFrame
-from pyspark.sql.types import StringType, StructField, StructType
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
+    from pyspark.sql.types import StructType
+
+    AnySparkSession = SparkSession | SparkRemoteSession
 
 from jett.utils import get_random_str, spark_env
 
-from .__types import AnySparkSession
 from .utils import is_remote_session
 
 logger = logging.getLogger("jett")
@@ -93,6 +99,8 @@ class TempStorage:
         `clean_temp_dir` process, this method will only overwrite temp_dir with
         empty dataframe for reducing usage of storage.
         """
+        from pyspark.sql.types import StringType, StructField, StructType
+
         logger.info(
             "overwrite directory %s with empty dataframe data file",
             self.temp_dir,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -40,7 +42,7 @@ class Daft(BaseEngine):
         context: Context,
         engine: DictData,
         metric: MetricEngine,
-    ) -> "DataFrame":
+    ) -> DataFrame:
         logger.info("Start execute with Arrow engine.")
         df: DataFrame = self.source.handle_load(context, engine=engine)
         df: DataFrame = self.handle_apply(df, context, engine=engine)
@@ -52,7 +54,7 @@ class Daft(BaseEngine):
         """Set Daft engine context."""
         return {"engine": self}
 
-    def set_result(self, df: "DataFrame", context: Context) -> Result:
+    def set_result(self, df: DataFrame, context: Context) -> Result:
         return Result(
             data=[],
             columns=[
@@ -63,12 +65,12 @@ class Daft(BaseEngine):
 
     def apply(
         self,
-        df: "DataFrame",
+        df: DataFrame,
         context: Context,
         engine: DictData,
         metric: MetricTransform,
         **kwargs,
-    ) -> "DataFrame":
+    ) -> DataFrame:
         for op in self.transforms:
             df: DataFrame = op.handle_apply(df, context, engine=engine)
         return df

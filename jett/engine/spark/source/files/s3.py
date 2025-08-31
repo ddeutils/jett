@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import logging
 import os
 from abc import ABC
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field, SecretStr
 from pydantic.functional_validators import model_validator
-from pyspark.sql import DataFrame, SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
 
 from .....__types import DictData
 from .....models import BasicFilter, Shape

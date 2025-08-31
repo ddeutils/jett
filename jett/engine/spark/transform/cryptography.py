@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import base64
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import SecretStr
-from pyspark.errors import PythonException
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col, udf
-from pyspark.sql.types import StringType
+
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+
+    PairCol = tuple[Column, str]
 
 from ....__types import DictData
-from .__abc import BaseSparkTransform, PairCol
+from .__abc import BaseSparkTransform
 
 
 class GCMDecrypt(BaseSparkTransform):
@@ -41,6 +44,9 @@ class GCMDecrypt(BaseSparkTransform):
         """
         from Crypto.Cipher import AES
         from Crypto.Hash import HMAC, SHA256
+        from pyspark.errors import PythonException
+        from pyspark.sql.functions import col, udf
+        from pyspark.sql.types import StringType
 
         def __decrypt_gcm(
             cipher_test: str,

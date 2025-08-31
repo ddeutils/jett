@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import duckdb
-from duckdb import DuckDBPyRelation as Relation
 from pydantic import Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import Self
@@ -14,6 +14,9 @@ from ....utils import join_newline, to_snake_case
 from ...__abc import BaseEngine
 from .__abc import BaseDuckDBTransform
 from .__models import ColumnMap
+
+if TYPE_CHECKING:
+    from duckdb import DuckDBPyRelation as Relation
 
 logger = logging.getLogger("jett")
 
@@ -53,6 +56,8 @@ class Sql(BaseDuckDBTransform):
             df (Relation): A Relation instance.
             engine (DictData): Any submodule of BaseEngine.
         """
+        import duckdb
+
         logger.info("Start SQL transform ...")
         if self.sql:
             sql: str = self.sql
@@ -75,6 +80,8 @@ class RenameSnakeCase(BaseDuckDBTransform):
 
     def apply(self, df: Relation, engine: DictData, **kwargs) -> Relation:
         """Apply to Rename Columns to Snake case."""
+        import duckdb
+
         old_cols = df.columns
         new_cols = [
             f'"{col_name}" AS {to_snake_case(col_name)}'
@@ -93,6 +100,8 @@ class RenameColumns(BaseDuckDBTransform):
 
     def apply(self, df: Relation, engine: DictData, **kwargs) -> Relation:
         """Apply to Rename Column transform."""
+        import duckdb
+
         stm: str = (
             f"SELECT * "
             f"RENAME ( {', '.join(c.gen_source() for c in self.columns)} ) "
@@ -119,6 +128,8 @@ class ExcludeColumns(BaseDuckDBTransform):
 
     def apply(self, df: Relation, engine: DictData, **kwargs) -> Relation:
         """Apply to Exclude Columns"""
+        import duckdb
+
         return duckdb.sql(
             f"SELECT * EXCLUDE ({', '.join(self.columns)}) FROM df"
         )

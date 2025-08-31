@@ -21,7 +21,6 @@ from ...models import (
 )
 from ...utils import exec_command, regex_by_group, sort_non_sensitive_str
 from ..__abc import BaseEngine
-from .__types import AnyDataFrame, AnySparkSession, PairCol
 from .schema_change import (
     clean_col_except_item_from_extract_array,
 )
@@ -42,7 +41,13 @@ from .utils import (
 
 if TYPE_CHECKING:
     from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
     from pyspark.sql.types import StructType
+
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
+    AnySparkSession = SparkSession | SparkRemoteSession
 
 logger = logging.getLogger("jett")
 

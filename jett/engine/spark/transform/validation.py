@@ -1,7 +1,11 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
-from pyspark.sql import DataFrame, SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
 
 from ....__types import DictData
 from ..utils import validate_col_disallow_pattern

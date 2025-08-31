@@ -1,13 +1,21 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+
     from ..sink import Sink
 
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
+    AnyApplyGroupOutput = PairCol | list[PairCol]
+    AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
+
 from pydantic import Field
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import ArrayType, StructField
 
 from ....__types import DictData
 from ....errors import ToolTransformError
@@ -21,7 +29,7 @@ from ..utils import (
     is_root_level_column_primitive_type,
     is_table_exist,
 )
-from .__abc import AnyApplyOutput, BaseSparkTransform
+from .__abc import BaseSparkTransform
 
 logger = logging.getLogger("jett")
 
@@ -122,6 +130,8 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
         **kwargs,
     ) -> AnyApplyOutput:
         """Detect schema change between DF and table schema."""
+        from pyspark.sql.types import ArrayType, StructField
+
         sql: str = "SELECT * FROM {database}.{table_name} LIMIT 0"
         logger.info("detect schema change with sink")
         if self.sink_type is not None:
@@ -130,7 +140,7 @@ class DetectSchemaChangeWithSink(BaseSparkTransform):
             table_name = self.table_name
         else:
             logger.info("use sink's configuration from config dict")
-            _sink: "Sink" = engine["engine"].sink
+            _sink: Sink = engine["engine"].sink
             if _sink.type in ("iceberg",):
                 db_name = _sink.database
                 table_name = _sink.table_name

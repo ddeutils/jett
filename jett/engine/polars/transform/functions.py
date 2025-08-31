@@ -1,11 +1,10 @@
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-import polars as pl
-from polars import DataFrame
-from polars import Expr as Column
 from pydantic import Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import Self
@@ -16,7 +15,13 @@ from ....models import MetricOperatorOrder
 from ....utils import to_snake_case
 from ...__abc import BaseEngine
 from ..utils import col_path, extract_cols_without_array
-from .__abc import BasePolarsTransform, ColMap, PairCol
+from .__abc import BasePolarsTransform, ColMap
+
+if TYPE_CHECKING:
+    from polars import DataFrame
+    from polars import Expr as Column
+
+    PairCol = tuple[Column, str]
 
 logger = logging.getLogger("jett")
 
@@ -93,6 +98,8 @@ class Expr(BasePolarsTransform):
         Returns:
             PairCol: A pair of Expr object and its alias name.
         """
+        import polars as pl
+
         return pl.sql_expr(self.query), self.name
 
 
@@ -211,6 +218,8 @@ class ExplodeArrayColumn(BasePolarsTransform):
         Returns:
             DataFrame: A Polars DataFrame that have exploded column.
         """
+        import polars as pl
+
         if not self.is_return_position:
             logger.info("Start Explode Array Column")
             if self.is_explode_outer:

@@ -1,19 +1,14 @@
+from __future__ import annotations
+
 import copy
 import logging
 import re
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
-from pyspark.sql.functions import col, explode
-from pyspark.sql.types import (
-    ArrayType,
-    DataType,
-    StructField,
-    StructType,
-    TimestampNTZType,
-    TimestampType,
-)
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
+    from pyspark.sql.types import DataType, StructField, StructType
 
 from ...utils import handle_command, is_snake_case
 
@@ -43,6 +38,8 @@ def schema2dict(
 
 def is_remote_session(spark: SparkSession | SparkRemoteSession) -> bool:
     """Check whether given session is remote session or not."""
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
+
     return isinstance(spark, SparkRemoteSession)
 
 
@@ -167,6 +164,8 @@ def extract_cols_selectable(schema: StructType, prefix: str = "") -> list[str]:
         ...     'items[x].detail[x].field2',
         ... ]
     """
+    from pyspark.sql.types import ArrayType, StructType
+
     rs: list[str] = []
     for field in schema:
         rs.append(prefix + field.name)
@@ -249,6 +248,8 @@ def extract_col_with_pattern(
     """Do recursive find the colum name that does not follow the pattern
     current supported patterns are non_snake_case and whitespace
     """
+    from pyspark.sql.types import ArrayType, StructType
+
     parent_cols: list[str] = parent_cols or []
 
     def _validate_and_append_error(
@@ -352,6 +353,8 @@ def validate_col_allow_snake_case(schema: StructType) -> None:
 
 def get_simple_str_dtype(dtype: DataType | StructField) -> str:
     """Get pyspark data type in simple string format."""
+    from pyspark.sql.types import StructField
+
     return (
         dtype.dataType.simpleString()
         if isinstance(dtype, StructField)
@@ -371,6 +374,8 @@ def is_root_level_column_primitive_type(
     schema: StructType, column: str
 ) -> bool:
     """is a column is a root level column and also a primitive type."""
+    from pyspark.sql.types import ArrayType, StructType
+
     is_root_column = is_root_level_column(schema=schema, column=column)
     if not is_root_column:
         return is_root_column
@@ -398,6 +403,8 @@ def _extract_selectable_plan_with_auto_explode(
         select_columns:
         plans:
     """
+    from pyspark.sql.types import ArrayType, StructType
+
     select_columns: list[str] = select_columns or []
     plans: list[dict] = plans or []
 
@@ -454,6 +461,8 @@ def select_with_auto_explode(df: DataFrame, column: str) -> DataFrame:
     """This method does similar thing to df.select(), but it explodes array
     column automatically when the schema during column extraction is ArrayType.
     """
+    from pyspark.sql.functions import explode
+
     plans = _extract_selectable_plan_with_auto_explode(
         schema=df.schema, columns=column.split("."), select_columns=[], plans=[]
     )
@@ -552,6 +561,8 @@ def _child_remove_column_from_struct(
 
 def remove_column_from_struct(schema: StructType, column: str) -> StructType:
     """Remove column from given schema (StructType)."""
+    from pyspark.sql.types import StructType
+
     schema_dict = _child_remove_column_from_struct(
         schema_dict=schema.jsonValue(),
         columns=column.split("."),
@@ -649,9 +660,9 @@ def replace_column_dtype_in_nested_schema(
     target_column: str,
     to_dtype: DataType,
 ) -> StructField:
-    """
-    replace target column to desire data type (support nested schema)
-    """
+    """Replace target column to desire data type (support nested schema)."""
+    from pyspark.sql.types import ArrayType, StructField, StructType
+
     if not isinstance(schema, StructField) or not isinstance(
         schema.dataType, (StructType, ArrayType)
     ):
@@ -674,13 +685,15 @@ def replace_column_dtype_in_nested_schema(
 
 def is_column_has_null(df: DataFrame, column: str) -> bool:
     """Check that the given column contains null value or not."""
+    from pyspark.sql.functions import col
+
     return bool(df.filter(col(column).isNull()).first())
 
 
 def is_timestamp_column(column_name: str, schema: StructType) -> bool:
-    """
-    is given column a timestamp column or not
-    """
+    """Return true if the given column a timestamp column."""
+    from pyspark.sql.types import TimestampNTZType, TimestampType
+
     is_timestamp_col = False
     for column in schema:
         if column.name == column_name and isinstance(

@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import copy
 import re
-from typing import Final
-
-import polars as pl
-from polars import Array, Expr, Field, List, Schema, Struct
+from typing import TYPE_CHECKING, Final
 
 from jett.utils import is_snake_case
+
+if TYPE_CHECKING:
+    from polars import Expr as Column
+    from polars import Schema, Struct
+
 
 ALLOW_VALIDATE_PATTERNS: Final[tuple[str, ...]] = (
     "non_snake_case",
@@ -26,6 +30,8 @@ def extract_col_with_pattern(
         patterns (list[str]):
         parent_cols (list[str], default None):
     """
+    from polars import Array, List, Struct
+
     parent_cols: list[str] = parent_cols or []
 
     def _validate_and_append_error(
@@ -135,6 +141,8 @@ def schema2struct(schema: Schema) -> Struct:
     Returns:
         Struct: A Struct object that create from the Polars Schema.
     """
+    from polars import Field, Struct
+
     return Struct([Field(name, dtype) for name, dtype in schema.items()])
 
 
@@ -187,6 +195,8 @@ def extract_cols_selectable(
         ...     'items[x].detail[x].field2',
         ... ]
     """
+    from polars import Array, List, Struct
+
     rs: list[str] = []
     struct: Struct = (
         schema2struct(schema) if isinstance(schema, Schema) else schema
@@ -239,7 +249,7 @@ def extract_cols_without_array(schema: Schema) -> list[str]:
     return rs
 
 
-def col_path(path: str) -> Expr:
+def col_path(path: str) -> Column:
     """Convert a dotted path notation to polars column expression supports also
     list access
 
@@ -253,8 +263,10 @@ def col_path(path: str) -> Expr:
         - ISSUE - https://github.com/pola-rs/polars/issues/3123
         - FIX - https://gist.github.com/ophiry/78e6e04a8fde01e58ee289febf3bc4cc
     """
+    import polars as pl
+
     parsed_path = re.findall(r"\.(\w+)|\[(\d+)]", f".{path}")
-    expr: Expr = pl.col(parsed_path[0][0])
+    expr: Column = pl.col(parsed_path[0][0])
     for field, index in parsed_path[1:]:
         if field:
             expr = expr.struct.field(field)

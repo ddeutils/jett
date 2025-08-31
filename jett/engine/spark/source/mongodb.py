@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field, SecretStr
 from pydantic.functional_validators import field_validator, model_validator
-from pyspark.sql import DataFrame, DataFrameReader, SparkSession
-from pyspark.sql.types import StructType
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, DataFrameReader, SparkSession
 
 from ....__types import DictData
 from ....models import BasicFilter, Shape
@@ -185,6 +188,8 @@ class MongoDB(BaseSource):
 
     def load(self, engine: DictData, **kwargs) -> tuple[Any, Shape]:
         """Load MongoDB Source"""
+        from pyspark.sql.types import StructType
+
         pipeline, schema = self.set_pipeline_load_all_struct()
         spark: SparkSession = engine["spark"]
         uri: str = self.get_uri()

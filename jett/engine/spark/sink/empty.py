@@ -1,11 +1,14 @@
-import logging
-from typing import Any, Literal
+from __future__ import annotations
 
-from pyspark.sql import DataFrame
+import logging
+from typing import TYPE_CHECKING, Any, Literal
 
 from ....__types import DictData
 from ....models import Shape
 from ...__abc import BaseSink
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame
 
 logger = logging.getLogger("jett")
 

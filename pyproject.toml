@@ -14,11 +14,12 @@ dependencies = [
     "ddeutil-io[yaml,toml]==0.2.17",
     "requests==2.32.4",
     "pyarrow==21.0.0",
+    "python-dateutil",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-airflow = [ "apache-airflow==2.7.3" ]
+airflow = [ "apache-airflow==2.9.3" ]
 spark = [ "pyarrow==21.0.0", "pyspark[connect]==3.4.1" ]
 duckdb = [ "duckdb==1.3.2" ]
 polars = [ "polars==1.32.0", "pyiceberg==0.9.1" ]

@@ -1,21 +1,18 @@
+from __future__ import annotations
+
 import logging
 from datetime import date
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, Row, SparkSession
+
     from ..sink import Sink
+
+    PairCol = tuple[Column, str]
 
 from pydantic import Field, PrivateAttr
 from pydantic.functional_validators import field_validator, model_validator
-from pyspark.sql import Column, DataFrame, Row, SparkSession
-from pyspark.sql import functions as f
-from pyspark.sql.functions import (
-    explode,
-    explode_outer,
-    posexplode,
-    posexplode_outer,
-)
-from pyspark.sql.types import StringType
 from typing_extensions import Self
 
 from ....__types import DictData
@@ -27,7 +24,7 @@ from ..utils import (
     is_table_exist,
     replace_all_occurrences,
 )
-from .__abc import BaseSparkTransform, PairCol
+from .__abc import BaseSparkTransform
 from .__models import RenameColMap
 
 logger = logging.getLogger("jett")
@@ -62,7 +59,9 @@ class Expr(BaseSparkTransform):
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
-        return f.expr(self.query), self.name
+        from pyspark.sql.functions import expr
+
+        return expr(self.query), self.name
 
 
 class SQL(BaseSparkTransform):
@@ -165,6 +164,8 @@ class RenameSnakeCase(BaseSparkTransform):
             ...     }
             ... }]
         """
+        from pyspark.sql.functions import col
+
         non_snake_case_cols = extract_col_with_pattern(
             schema=df.schema, patterns=["non_snake_case"]
         )
@@ -180,7 +181,7 @@ class RenameSnakeCase(BaseSparkTransform):
 
             if schema.name.islower() is False or " " in schema.name:
                 new_col_name = to_snake_case(schema.name)
-                temp_dict[new_col_name] = f.col(schema.name)
+                temp_dict[new_col_name] = col(schema.name)
 
             dtype = schema.dataType.simpleString()
             if dtype.islower() is False or " " in dtype:
@@ -189,7 +190,7 @@ class RenameSnakeCase(BaseSparkTransform):
                     val = temp_dict[new_col_name]
                     temp_dict[new_col_name] = val.cast(new_dtype)
                 else:
-                    temp_dict[schema.name] = f.col(schema.name).cast(new_dtype)
+                    temp_dict[schema.name] = col(schema.name).cast(new_dtype)
 
             if len(temp_dict) > 0:
                 transform_dict = {**transform_dict, **temp_dict}
@@ -364,6 +365,9 @@ class CleanMongoJsonStr(BaseSparkTransform):
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
+        from pyspark.sql.functions import col, expr
+        from pyspark.sql.types import StringType
+
         from ..udf import clean_mongo_json_udf
 
         func_name: str = "cleanMongoJsonString"
@@ -372,12 +376,10 @@ class CleanMongoJsonStr(BaseSparkTransform):
             spark.udf.registerJavaFunction(
                 func_name, java_class_name, StringType()
             )
-            column: Column = f.expr(f"{func_name}({self.source})").cast(
-                "string"
-            )
+            column: Column = expr(f"{func_name}({self.source})").cast("string")
             return column, self.source
         mongo_udf = clean_mongo_json_udf(spark)
-        return mongo_udf(f.col(self.source)), self.source
+        return mongo_udf(col(self.source)), self.source
 
 
 class JsonStrToStruct(BaseSparkTransform):
@@ -518,11 +520,13 @@ class Scd2(BaseSparkTransform):
         Returns:
             Dataframe: the final dataframe that ready to write to the table
         """
+        from pyspark.sql.functions import col, lit
+
         db_name: str | None = None
         table_name: str | None = None
 
         # NOTE: Check if config_dict is not empty (not {})
-        _sink: "Sink" = engine["engine"].sink
+        _sink: Sink = engine["engine"].sink
         if _sink.type in ("iceberg", "hdfs"):
             logger.info("Use sink's configuration from config dict")
             db_name: str = _sink.database
@@ -544,7 +548,7 @@ class Scd2(BaseSparkTransform):
         ):
             # Step01: get df_tgt
             tgt_df = spark.sql(f"SELECT * FROM {db_name}.{table_name}").filter(
-                f.col(self.col_end_name).isNull()
+                col(self.col_end_name).isNull()
             )
             # Step02: add _scd2_start_time and _scd_end_time column to df_source
             src_df = self._add_start_and_end_in_src(tgt_df=tgt_df, src_df=df)
@@ -559,8 +563,8 @@ class Scd2(BaseSparkTransform):
         #   provided, choose created_at as {scd2_start_col}.
         return df.withColumns(
             {
-                self.col_start_name: f.col(self.create_key),
-                self.col_end_name: f.lit(None).cast("timestamp"),
+                self.col_start_name: col(self.create_key),
+                self.col_end_name: lit(None).cast("timestamp"),
             }
         )
 
@@ -572,6 +576,8 @@ class Scd2(BaseSparkTransform):
         """Add thr `_scd2_start_time` and `_scd_end_time` columns to the source
         DataFrame.
         """
+        from pyspark.sql import functions as f
+
         # NOTE: get existing id in target table and max updated_at value
         tgt_df_max: DataFrame = tgt_df.groupby(self.merge_key).agg(
             f.max(self.update_key).alias("_max_update_key")
@@ -691,6 +697,14 @@ class ExplodeArrayColumn(BaseSparkTransform):
                 that was generated on that current execution.
             spark (SparkSession, default None): A Spark session.
         """
+        from pyspark.sql import functions as f
+        from pyspark.sql.functions import (
+            explode,
+            explode_outer,
+            posexplode,
+            posexplode_outer,
+        )
+
         if not self.is_return_position:
             logger.info("Start Explode Array Column")
             if self.is_explode_outer:
@@ -751,10 +765,12 @@ class FlattenAllExceptArray(BaseSparkTransform):
         Returns:
             DataFrame:
         """
+        from pyspark.sql.functions import col
+
         transform_dict: dict[str, Column] = {}
         for c in extract_cols_without_array(schema=df.schema):
             flatten_col: str = "_".join(c.split("."))
-            transform_dict[flatten_col] = f.col(c)
+            transform_dict[flatten_col] = col(c)
 
         logger.info("Start Flatten all columns except array")
         for k, v in transform_dict.items():

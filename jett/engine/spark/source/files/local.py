@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
-from pyspark.sql import DataFrame, SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
 
 from .....__types import DictData
 from .....models import Shape

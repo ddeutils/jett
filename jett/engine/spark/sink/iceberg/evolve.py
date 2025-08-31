@@ -1,18 +1,13 @@
+from __future__ import annotations
+
 import logging
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col
-from pyspark.sql.types import (
-    ArrayType,
-    DoubleType,
-    FloatType,
-    IntegerType,
-    LongType,
-    StructField,
-    StructType,
-)
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.types import StructField, StructType
 
 from .....utils import clean_string
 from ...schema_change import (
@@ -212,6 +207,8 @@ class Evolver:
         """Set the transform dict for columns that are safe to be change data
         type.
         """
+        from pyspark.sql.types import StructField, StructType
+
         if len(parent_cols) > 0:
             root_column = parent_cols[0]
             root_schema = self.df.select(root_column).schema[0]
@@ -264,6 +261,14 @@ class Evolver:
         note: current_dtype is the current column's data type in the table
               to_be_dtype is the column's data type in the dataframe
         """
+        from pyspark.sql.types import (
+            DoubleType,
+            FloatType,
+            IntegerType,
+            LongType,
+            StructField,
+        )
+
         is_safe_update = False
         _cur_dtype = current_dtype
         _tobe_dtype = to_be_dtype
@@ -300,6 +305,8 @@ class Evolver:
         check that the given column contain only null value or empty array or not
         if it's empty array, append the column to the list and wait for drop column operation
         """
+        from pyspark.sql.types import ArrayType, StructField, StructType
+
         is_safe_update = False
 
         # allow to check only primitive type
@@ -398,6 +405,8 @@ class Evolver:
 
     def evolve_schema(self) -> None:
         """Evolve table schema based on incoming dataframe and evolve behavior."""
+        from pyspark.sql.functions import col
+
         logger.info(
             f"Schema evolve behavior: {self.model.schema_evolve_behavior}"
         )

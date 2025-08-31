@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import logging
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import StructField, TimestampType
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.types import StructField
 
 from .....utils import clean_string, get_dt_now
 
@@ -31,6 +36,8 @@ class TableMaintenance(BaseModel):
 
     def validate_retention_key(self, df: DataFrame) -> None:
         """Validate retention key, it must be a timestamp column."""
+        from pyspark.sql.types import TimestampType
+
         if self.retention_days is None:
             return
 

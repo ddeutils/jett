@@ -1,14 +1,22 @@
+from __future__ import annotations
+
 import logging
-from typing import Annotated, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Literal, Union
 
 from pydantic import Field
-from pyspark.sql import Column, DataFrame, SparkSession
-from pyspark.sql.types import StructType
+
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+    from pyspark.sql.types import StructType
+
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
 
 from ....__types import DictData
 from ....errors import ToolTransformError
 from ....models import Context, MetricOperatorGroup, MetricOperatorOrder
-from .__abc import AnyDataFrame, BaseSparkTransform, PairCol, is_pair_col
+from .__abc import BaseSparkTransform, is_pair_col
 from .compute_metric import CalculateMinMaxOfColumns, DetectSchemaChangeWithSink
 from .cryptography import GCMDecrypt
 from .functions import (

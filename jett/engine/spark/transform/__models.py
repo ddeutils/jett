@@ -1,19 +1,20 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
-from pyspark.sql import Column, DataFrame
-from pyspark.sql.functions import (
-    col,
-    expr,
-    lit,
-)
+
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame
+
+    PairCol = tuple[Column, str]
 
 from ..utils import (
     extract_cols_selectable,
     has_fix_array_index,
     replace_fix_array_index_with_x_index,
 )
-from .__abc import PairCol
 
 logger = logging.getLogger("jett")
 
@@ -34,6 +35,8 @@ class ColMap(BaseModel):
         Returns:
             PairCol: A pair of Column instance and its alias name.
         """
+        from pyspark.sql.functions import lit
+
         column: Column = lit(None)
         if self.dtype:
             column = column.cast(self.dtype)
@@ -46,6 +49,8 @@ class RenameColMap(ColMap):
     """
 
     def get_rename_pair(self) -> PairCol:
+        from pyspark.sql.functions import col, expr
+
         column: Column = (
             expr(self.source)
             if has_fix_array_index(self.source)

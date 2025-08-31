@@ -1,13 +1,16 @@
-import copy
-from typing import Any
+from __future__ import annotations
 
-from pyspark.sql.types import ArrayType, DataType, StructField, StructType
+import copy
+from typing import TYPE_CHECKING, Any
 
 from .utils import ENUM_EXTRACT_ARRAY_TYPE
 
-Changed = dict[str, str | DataType | list[str]]
-ListStr = list[str]
-ListDictAny = list[dict[str, Any]]
+if TYPE_CHECKING:
+    from pyspark.sql.types import DataType, StructType
+
+    Changed = dict[str, str | DataType | list[str]]
+    ListStr = list[str]
+    ListDictAny = list[dict[str, Any]]
 
 
 def extract_struct_type(
@@ -29,6 +32,8 @@ def extract_struct_type(
     Returns:
         list[Changed]
     """
+    from pyspark.sql.types import ArrayType, StructType
+
     parent_cols: list[str] = parent_cols or []
     # NOTE: Found nested field or source struct is not the same data type
     #   as table struct e.g. array of string and array of struct.
@@ -90,6 +95,8 @@ def evaluate_schema_change(
             ...     'parent_cols': [],
             ... }
     """
+    from pyspark.sql.types import ArrayType, StructField, StructType
+
     parent_cols: list[str] = parent_cols or []
     diffs: list[Changed] = []
 

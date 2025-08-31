@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import Field
-from pyspark.sql import DataFrame, SparkSession
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.connect.session import SparkSession as SparkRemoteSession
+
+    AnySparkSession = SparkSession | SparkRemoteSession
 
 from .....__types import DictData
 from .....models import BasicFilter, Shape
 from .....utils import bool2str
 from ....__abc import BaseSource
-from ...__types import AnySparkSession
 from ...utils import is_remote_session
 
 logger = logging.getLogger("jett")
