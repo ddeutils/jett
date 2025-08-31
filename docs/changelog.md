@@ -2,6 +2,35 @@
 
 ## Latest Changes
 
+## 0.0.3
+
+### :sparkles: Features
+
+- :dart: draft airflow operator support.
+- :dart: add transform rename snakecase for daft.
+
+### :bug: Bug fixes
+
+- :gear: deps be optional with base version.
+
+### :black_nib: Code Changes
+
+- :art: move to use type-checking for dynamic import.
+- :art: change format code and add field desc.
+- :art: add optional import.
+- :test_tube: build airflow standalone for testing operator.
+- :test_tube: add test airflow operator.
+
+### :package: Build & Workflow
+
+- :toolbox: fix build airflow for test operator.
+- :toolbox: revise dockerfile.
+
+### :book: Documentations
+
+- :page_facing_up: update readme file.
+- :page_facing_up: update readme file.
+
 ## 0.0.2
 
 ### :sparkles: Features
