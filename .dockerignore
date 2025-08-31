@@ -8,6 +8,7 @@ assets/
 docs/
 dags/
 logs/
+scripts/
 tests/
 .gitattributes
 .gitignore

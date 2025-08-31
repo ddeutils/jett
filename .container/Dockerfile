@@ -7,7 +7,7 @@ ENV UV_COMPILE_BYTECODE=1
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.7 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.8.14 /uv /uvx /bin/
 
 ARG AIRFLOW_VERSION=2.11.0
 ARG PYTHON_VERSION=3.10
@@ -19,8 +19,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # WARNING: Install pendulum first because Airflow version 2.7 does not compatible
 #   if it more than 3.0.0
-RUN uv pip install "pendulum<3.0.0" && \
-    uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
+RUN uv pip install -U pip \
+    && uv pip install "pendulum<3.0.0" \
+    && uv pip install "apache-airflow[google]==${AIRFLOW_VERSION}" \
       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-${PYTHON_VERSION}.txt"
 
 # NOTE: Force change version of necessary version of deps package for DAG Tool.
@@ -28,8 +29,10 @@ RUN uv pip install "pendulum<3.0.0" && \
 RUN uv pip install \
       "pydantic==2.9.2"
 
-COPY ./jett /opt/airflow/plugins/jett
+COPY . .
 
-ENV PYTHONPATH="/opt/airflow:/opt/airflow/plugins:${PYTHONPATH}"
+RUN uv pip install -e .
+
+ENV PYTHONPATH="/opt/airflow/:/opt/airflow/plugins/:$PYTHONPATH"
 
 WORKDIR /opt/airflow

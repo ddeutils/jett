@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +13,8 @@ with DAG(
     schedule=None,
     catchup=False,
     template_searchpath=str((Path(__file__).parent / "assets").absolute()),
+    user_defined_macros={"env": os.getenv},
 ) as dag:
     start = EmptyOperator(task_id="start", dag=dag)
-    jett = JettOperator(task_id="jett", tool="duckdb.csv.tool", dag=dag)
+    jett = JettOperator(task_id="jett", tool="arrow.csv.tool", dag=dag)
     start >> jett

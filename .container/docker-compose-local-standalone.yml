@@ -1,4 +1,4 @@
-name: dagtool
+name: jett
 services:
   airflow:
     image: airflow-standalone-local
@@ -11,7 +11,20 @@ services:
         PYTHON_VERSION: ${PYTHON_VERSION:-3.10}
     ports:
       - "8080:8080"
-    command: [ "airflow", "standalone" ]
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow standalone
+#        airflow db migrate
+#        airflow users create \
+#            --username admin \
+#            --firstname Peter \
+#            --lastname Parker \
+#            --role Admin \
+#            --email spiderman@superhero.org
+#        airflow webserver --port 8080
+#        airflow scheduler
     environment:
       AIRFLOW_HOME: "/opt/airflow"
       AIRFLOW_CONFIG: "/opt/airflow/airflow.cfg"
@@ -23,4 +36,5 @@ services:
       - ${AIRFLOW_PROJ_DIR:-.}/.container/airflow_local_settings.py:/opt/airflow/config/airflow_local_settings.py
       # NOTE: Mount tool package suppose as it use GitSync on production instead
       #   of install via Python package.
-      - ${AIRFLOW_PROJ_DIR:-.}/dagtool:/opt/airflow/plugins/dagtool
+      # - ${AIRFLOW_PROJ_DIR:-.}/jett:/opt/airflow/plugins/jett
+      - ${AIRFLOW_PROJ_DIR:-.}/assets/data:/opt/airflow/data

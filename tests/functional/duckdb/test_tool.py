@@ -5,7 +5,7 @@ from jett.tools import Tool
 
 
 def test_duckdb_csv_to_console(root_path: Path):
-    op = Tool(path=root_path / "assets/example.duckdb.csv.tool")
+    op = Tool(path=root_path / "assets/example.arrow.csv.tool")
     rs: Result = op.execute(allow_raise=True)
     print(rs.columns)
 
