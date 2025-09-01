@@ -6,7 +6,7 @@
 
 **Just an Engine Template Tool** that easy to use and develop for Data Engineer.
 This project support the ETL template for multiple DataFrame engine like
-`PySpark`, `Duckdb`, `Polars`, etc.
+`PyArrow`, `PySpark`, `Duckdb`, `Polars`, etc.
 
 **Supported Features**:
 
@@ -61,7 +61,6 @@ it with the JSON schema with pattern `*.tool`), for ETL state like:
 type: polars
 name: Load CSV to GGSheet
 app_name: load_csv_to_ggsheet
-master: local
 
 # 1) 🚰 Load data from source
 source:
@@ -75,9 +74,11 @@ transforms:
   - op: group
     transforms:
       - op: expr
-        sql: "CAST(id AS string)"
+        sql: "CAST(id AS string) AS id"
+      - op: expr
+        sql: "customer_name AS name"
 
-# 3) 🎯 Sink result to target (multi-sink supported)
+# 3) 🎯 Sink result to target (multi-sink supported depends on each engine)
 sink:
   - type: local
     file_type: google_sheet
