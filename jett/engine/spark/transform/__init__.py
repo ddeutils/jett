@@ -5,14 +5,6 @@ from typing import TYPE_CHECKING, Annotated, Literal, Union
 
 from pydantic import Field
 
-if TYPE_CHECKING:
-    from pyspark.sql import Column, DataFrame, SparkSession
-    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
-    from pyspark.sql.types import StructType
-
-    PairCol = tuple[Column, str]
-    AnyDataFrame = DataFrame | DataFrameRemote
-
 from ....__types import DictData
 from ....errors import ToolTransformError
 from ....models import Context, MetricOperatorGroup, MetricOperatorOrder
@@ -33,13 +25,21 @@ from .functions import (
 )
 from .validation import ValidateColumnDisallowSpace
 
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+    from pyspark.sql.types import StructType
+
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
+
 logger = logging.getLogger("jett")
 
 GroupTransform = Annotated[
     Union[RenameColumns,],
     Field(
         discriminator="op",
-        description="A transform that allow to use in group operator.",
+        description="A transform that allow to use in the group operator.",
     ),
 ]
 
@@ -170,6 +170,6 @@ Transform = Annotated[
     ],
     Field(
         discriminator="op",
-        description="A transform registry",
+        description="A transform registry.",
     ),
 ]

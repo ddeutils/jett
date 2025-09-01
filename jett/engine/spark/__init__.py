@@ -9,9 +9,9 @@ from pydantic import Field
 from pydantic.functional_validators import model_validator
 from typing_extensions import Self
 
-from ...__about__ import __version__
-from ...__types import DictData, PrimitiveType
-from ...models import (
+from jett.__about__ import __version__
+from jett.__types import DictData, PrimitiveType
+from jett.models import (
     ColDetail,
     Context,
     MetricEngine,
@@ -19,6 +19,7 @@ from ...models import (
     MetricTransform,
     Result,
 )
+
 from ...utils import exec_command, regex_by_group, sort_non_sensitive_str
 from ..__abc import BaseEngine
 from .schema_change import (
@@ -173,7 +174,8 @@ class Spark(BaseEngine):
                 model.
 
         Returns:
-            DictData: A mapping of necessary data for Spark execution.
+            EngineContext: A mapping of necessary data for Spark execution
+                context.
         """
         return {
             "spark": self.session(context, **kwargs),
@@ -205,7 +207,7 @@ class Spark(BaseEngine):
                 step for passing custom metric data.
 
         Returns:
-            DataFrame: A result DataFrame API.
+            DataFrame: A result PySpark DataFrame API.
         """
         logger.info("🏗️ Start execute with Spark engine.")
         # NOTE: Start run source handler.
@@ -230,7 +232,7 @@ class Spark(BaseEngine):
 
         Returns:
             Result: A result object that catch schema and sample data from the
-            execution result DataFrame.
+                execution result DataFrame.
         """
         if self.enable_collect_result:
             logger.warning(
@@ -239,12 +241,11 @@ class Spark(BaseEngine):
                 "pipeline with large data sizes. Please use it only for "
                 "testing purposes or with smaller datasets."
             )
-        schema: StructType = df.schema
         return Result(
             data=df.collect() if self.enable_collect_result else [],
             columns=[
                 ColDetail(name=f.name, dtype=f.dataType.simpleString())
-                for f in schema
+                for f in df.schema
             ],
             schema_dict=df.schema.jsonValue(),
         )

@@ -55,13 +55,20 @@ class ColDetail(BaseModel):
 
 
 class Result(BaseModel):
-    """A shared data structure of result of Jett tool. This model will use to be
-    an output from tool execution step.
+    """Result model is a shared data structure of result of Jett tool. This
+    model will use to be an output from tool execution step.
 
     Examples:
         >>> Result(
         ...     data=[{"id": 1}, {"id": 2}],
         ...     columns=[ColDetail(name="id", dtype="integer")],
+        ... )
+
+        Create Result with schema dict.
+        >>> from pyarrow import int32
+        >>> Result(
+        ...     data=[{"id": 1}, {"id": 2}],
+        ...     schema_dict={"id": int32()},
         ... )
     """
 
@@ -69,8 +76,16 @@ class Result(BaseModel):
         default_factory=list,
         description="A sample data that already save to the sink.",
     )
-    columns: list[ColDetail] = Field(default_factory=list)
-    schema_dict: dict[str, Any] = Field(default_factory=dict)
+    columns: list[ColDetail] = Field(
+        default_factory=list,
+        description="A list of ColDetail model.",
+    )
+    schema_dict: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "A mapping of column name and it real type of its engine API."
+        ),
+    )
 
 
 class EmitCond(str, Enum):
@@ -169,7 +184,7 @@ class BaseMetricData(BaseModel):
         return self
 
     def finish(self) -> Self:
-        """Set the end_dt field."""
+        """Set the end_dt and latency_ms fields."""
         self.end_dt = get_dt_now()
         self.latency_ms = (self.end_dt - self.start_dt).total_seconds()
         return self

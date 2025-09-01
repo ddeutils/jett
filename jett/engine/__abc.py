@@ -1,5 +1,9 @@
-"""Abstraction module for keeping necessary abstract model class that making
-from ABC and BaseModel.
+"""Abstraction module for keeping necessary abstract models that making
+from ABC and BaseModel together.
+
+    This abstract model use for the baseline of any engine model of this package
+that take you can change engine by `type=?` instead of revise all config keys and
+values.
 
 AbstractClasses:
     BaseEngine: A Base abstraction model and class for any implemented engine.
@@ -111,6 +115,7 @@ class BaseEngine(BaseModel, ABC):
         json_schema_input_type=str | list[str] | None,
     )
     def __convert_str_to_list_of_str(cls, data: Any) -> Any:
+        """Convert str to list of str support multi passing type."""
         if data and isinstance(data, str):
             return [data]
         return data

@@ -6,17 +6,6 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field
 
-if TYPE_CHECKING:
-    from pyspark.sql import Column, DataFrame, SparkSession
-    from pyspark.sql.connect.column import Column as ColumnRemote
-    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
-    from pyspark.sql.types import StructType
-
-    PairCol = tuple[Column, str]
-    AnyDataFrame = DataFrame | DataFrameRemote
-    AnyApplyGroupOutput = PairCol | list[PairCol]
-    AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
-
 from ....__types import DictData
 from ....errors import ToolTransformError
 from ....models import (
@@ -28,6 +17,17 @@ from ....models import (
 from ....utils import sort_non_sensitive_str
 from ...__abc import BaseTransform
 from ..utils import extract_cols_without_array, schema2dict
+
+if TYPE_CHECKING:
+    from pyspark.sql import Column, DataFrame, SparkSession
+    from pyspark.sql.connect.column import Column as ColumnRemote
+    from pyspark.sql.connect.session import DataFrame as DataFrameRemote
+    from pyspark.sql.types import StructType
+
+    PairCol = tuple[Column, str]
+    AnyDataFrame = DataFrame | DataFrameRemote
+    AnyApplyGroupOutput = PairCol | list[PairCol]
+    AnyApplyOutput = AnyApplyGroupOutput | AnyDataFrame
 
 logger = logging.getLogger("jett")
 
@@ -78,7 +78,7 @@ class BaseSparkTransform(BaseTransform, ABC):
         """Apply operator transform abstraction method.
 
         Args:
-            df (Any): A Spark DataFrame.
+            df (DataFrame): A Spark DataFrame.
             engine (DictData): An engine context data that was created from the
                 `post_execute` method. That will contain engine model, engine
                 session object for this execution, or it can be specific config
