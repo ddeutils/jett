@@ -2,6 +2,21 @@ from pyarrow import Schema, StructType
 from pyarrow.types import is_fixed_size_list, is_large_list, is_list, is_struct
 
 
+def schema2dict(
+    schema: Schema, sorted_by_name: bool = False
+) -> list[dict[str, str]]:
+    """Convert StructType object to dict that include keys, `name` and `dtype`.
+
+    Args:
+        schema:
+        sorted_by_name:
+    """
+    rs: list[dict[str, str]] = [
+        {"name": f.name, "dtype": str(f.dtype)} for f in schema
+    ]
+    return sorted(rs, key=lambda x: x["name"]) if sorted_by_name else rs
+
+
 def extract_cols_without_array(schema: Schema) -> list[str]:
     """Extract selectable columns without array type.
 
