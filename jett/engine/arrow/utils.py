@@ -1,14 +1,15 @@
-from pyarrow import ListType, StructType
+from pyarrow import Schema, StructType
+from pyarrow.types import is_fixed_size_list, is_large_list, is_list, is_struct
 
 
-def extract_cols_without_array(schema: StructType) -> list[str]:
+def extract_cols_without_array(schema: Schema) -> list[str]:
     """Extract selectable columns without array type.
 
         It returns only list of selectable columns that are not nested array
     type return only root array column name.
 
     Args:
-        schema (StructType):
+        schema (Schema):
 
     Returns:
         list[str]: A list of column name that extract by selectable without
@@ -32,63 +33,73 @@ def extract_cols_without_array(schema: StructType) -> list[str]:
     return rs
 
 
-def extract_cols_selectable(schema: StructType, prefix: str = "") -> list[str]:
-    """Extracts all selectable columns of given schema, support all top level
-    column and nested column and array column.
+def extract_cols_selectable(
+    schema: Schema | StructType,
+    prefix: str = "",
+) -> list[str]:
+    """
+    Extracts all selectable columns of a given pyarrow schema,
+    including nested struct fields and list (array) fields.
+
+    Args:
+        schema (pa.Schema): The pyarrow schema.
+        prefix (str, optional): Internal prefix for recursion.
 
     Returns:
-        list[str]: All cols like:
-            ["c1", "c2.f1", "c2.f2", "c3"]
+        list[str]: List of selectable column paths.
 
-    Examples:
-        Input:
-        >>> from pyspark.sql.types import StringType, IntegerType, DoubleType
-        >>> StructType(
-        ...     [
-        ...         StructField("texts", ArrayType(StringType())),
-        ...         StructField("items", ArrayType(StructType(
-        ...             [
-        ...                 StructField("name", StringType()),
-        ...                 StructField("price", IntegerType()),
-        ...                 StructField("detail", ArrayType(StructType(
-        ...                     [
-        ...                         StructField("field1", StringType()),
-        ...                         StructField("field2", DoubleType()),
-        ...                     ]
-        ...                 )))
-        ...             ]
-        ...         )))
-        ...     ]
-        ... )
-
-        Output:
-        >>> [
-        ...     'texts',
-        ...     'texts[x]',
-        ...     'items',
-        ...     'items[x]',
-        ...     'items[x].name',
-        ...     'items[x].price',
-        ...     'items[x].detail',
-        ...     'items[x].detail[x]',
-        ...     'items[x].detail[x].field1',
-        ...     'items[x].detail[x].field2',
-        ... ]
+    Example:
+        >>> import pyarrow as pa
+        >>> _schema = pa.schema([
+        ...     pa.field("texts", pa.list_(pa.string())),
+        ...     pa.field("items", pa.list_(
+        ...         pa.struct([
+        ...             pa.field("name", pa.string()),
+        ...             pa.field("price", pa.int32()),
+        ...             pa.field("detail", pa.list_(
+        ...                 pa.struct([
+        ...                     pa.field("field1", pa.string()),
+        ...                     pa.field("field2", pa.float64()),
+        ...                 ])
+        ...             ))
+        ...         ])
+        ...     ))
+        ... ])
+        >>> extract_cols_selectable(_schema)
+        [
+            'texts',
+            'texts[x]',
+            'items',
+            'items[x]',
+            'items[x].name',
+            'items[x].price',
+            'items[x].detail',
+            'items[x].detail[x]',
+            'items[x].detail[x].field1',
+            'items[x].detail[x].field2'
+        ]
     """
     rs: list[str] = []
+
     for field in schema:
-        rs.append(prefix + field.name)
-        field_type = field.dataType
-        if isinstance(field_type, StructType):
-            rs.extend(
-                extract_cols_selectable(field_type, f"{prefix}{field.name}.")
-            )
-        elif isinstance(field_type, ListType):
-            rs.append(prefix + field.name + "[x]")
-            if isinstance(field_type.elementType, StructType):
+        field_name = prefix + field.name
+        rs.append(field_name)
+
+        field_type = field.type
+        if is_struct(field_type):
+            rs.extend(extract_cols_selectable(field_type, f"{field_name}."))
+
+        # NOTE: Array types (list, large_list, fixed_size_list)
+        elif (
+            is_list(field_type)
+            or is_large_list(field_type)
+            or is_fixed_size_list(field_type)
+        ):
+            rs.append(field_name + "[x]")
+            element_type = field_type.value_type
+            if is_struct(element_type):
                 rs.extend(
-                    extract_cols_selectable(
-                        field_type.elementType, f"{prefix}{field.name}[x]."
-                    )
+                    extract_cols_selectable(element_type, f"{field_name}[x].")
                 )
+
     return rs

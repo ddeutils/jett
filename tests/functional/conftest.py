@@ -9,7 +9,7 @@ logger = logging.getLogger("jett")
 @pytest.fixture(scope="package", autouse=True)
 def alert_unittest():
     message: str = (
-        "🧪⚗️ Start Run the Unittest testcase for DE Tool package. This unittest "
+        "🧪⚗️ Start Run the Unittest testcase for Jett package. This unittest "
         "include only functional testcase that do not run any integration "
         "module."
     )
