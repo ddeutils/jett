@@ -276,8 +276,11 @@ class SelectColumns(BaseSparkTransform):
     """Select Columns Operator transform model."""
 
     op: Literal["select"]
-    columns: list[str]
-    allow_missing: bool = False
+    columns: list[str] = Field(description="A list of column names.")
+    allow_missing: bool = Field(
+        default=False,
+        description="A flag for map with the current schema before select.",
+    )
 
     def apply(
         self,
@@ -310,6 +313,8 @@ class SelectColumns(BaseSparkTransform):
 
 
 class DropColumns(BaseSparkTransform):
+    """Drop Columns Operator transform model."""
+
     op: Literal["drop_columns"]
     columns: list[str]
     allow_missing_columns: bool = False
@@ -395,6 +400,8 @@ class JsonStrToStruct(BaseSparkTransform):
     _tmp_dir: str | None = PrivateAttr(default=None)
 
     def override_tmp_dir(self) -> str:
+        """Override temporary dir."""
+
         rand_str: str = get_random_str_unique(n=12)
         current_date: date = get_dt_now().date()
         self._tmp_dir: str = (

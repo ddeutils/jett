@@ -16,6 +16,9 @@ from .transform import Transform
 
 if TYPE_CHECKING:
     from pyarrow import Table
+    from pyarrow.dataset import Dataset
+
+    TableOrDataset = Table | Dataset
 
 logger = logging.getLogger("jett")
 
@@ -55,7 +58,7 @@ class Arrow(BaseEngine):
 
     def execute(
         self, context: Context, engine: DictData, metric: MetricEngine
-    ) -> Table:
+    ) -> TableOrDataset:
         """Execute Arrow engine method.
 
         Args:
@@ -71,15 +74,15 @@ class Arrow(BaseEngine):
                 step for passing custom metric data.
 
         Returns:
-            Table: A result Arrow Table API.
+            Table | Dataset: A result Arrow Table or Dataset API.
         """
         logger.info("🏗️ Start execute with Arrow engine.")
 
         # NOTE: Start run source handler.
-        df: Table = self.source.handle_load(context, engine=engine)
+        df: TableOrDataset = self.source.handle_load(context, engine=engine)
 
         # NOTE: Start run transform handler.
-        df: Table = self.handle_apply(df, context, engine=engine)
+        df: TableOrDataset = self.handle_apply(df, context, engine=engine)
 
         # NOTE: Start run sink handler with sequential strategy.
         for sk in self.sink:
@@ -103,11 +106,11 @@ class Arrow(BaseEngine):
             "engine": self,
         }
 
-    def set_result(self, df: Table, context: Context) -> Result:
+    def set_result(self, df: TableOrDataset, context: Context) -> Result:
         """Set the Result object for this Spark engine.
 
         Args:
-            df (Table): An Arrow Table.
+            df (Table | Dataset): An Arrow Table.
             context (Context): A execution context that was created from the
                 core operator execution step this context will keep all operator
                 metadata and metric data before emit them to metric config
@@ -135,17 +138,17 @@ class Arrow(BaseEngine):
 
     def apply(
         self,
-        df: Table,
+        df: TableOrDataset,
         context: Context,
         engine: EngineContext,
         metric: MetricTransform,
         **kwargs,
-    ) -> Table:
+    ) -> TableOrDataset:
         """Apply Arrow engine transformation to the source. This method will
         apply all operators by priority.
 
         Args:
-            df (Table): An Arrow Table.
+            df (Table | Dataset): An Arrow Table.
             context (Context): A execution context that was created from the
                 core operator execution step this context will keep all operator
                 metadata and metric data before emit them to metric config
@@ -158,9 +161,9 @@ class Arrow(BaseEngine):
                 handler step for passing custom metric data.
 
         Returns:
-            Table:
+            Table | Dataset:
         """
         logger.debug(f"⚙️ Priority - transform count: {len(self.transforms)}")
         for op in self.transforms:
-            df: Table = op.handle_apply(df, context, engine=engine)
+            df: TableOrDataset = op.handle_apply(df, context, engine=engine)
         return df

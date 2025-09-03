@@ -3,9 +3,11 @@ from typing import Annotated, Union
 from pydantic import Field
 
 from .files.local import (
-    LocalCsvFileDataset,
     LocalCsvFileTable,
     LocalJsonFileTable,
+)
+from .files.local_ds import (
+    LocalCsvFileDataset,
     LocalParquetFileDataset,
 )
 
@@ -24,5 +26,8 @@ Source = Annotated[
         LocalJsonFileTable,
         LocalParquetFileDataset,
     ],
-    Field(discriminator="file_format"),
+    Field(
+        discriminator="file_format",
+        description="A Source registry model",
+    ),
 ]

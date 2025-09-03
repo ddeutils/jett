@@ -2,8 +2,10 @@ import logging
 from typing import Literal
 
 from pyarrow import Table
+from pydantic import Field
 
 from ....__types import DictData
+from ....models import MetricOperatorOrder
 from ....utils import to_snake_case
 from .__abc import BaseArrowTransform
 
@@ -25,3 +27,19 @@ class RenameSnakeCase(BaseArrowTransform):
             logger.info(f"... {c!r} to {new_col!r}")
             new_cols[c] = new_col
         return df.rename_columns(new_cols)
+
+
+class SelectColumns(BaseArrowTransform):
+    """Select Columns Operator transform model."""
+
+    op: Literal["select"]
+    columns: list[str]
+    allow_missing: bool = Field(default=False)
+
+    def apply(
+        self,
+        df: Table,
+        engine: DictData,
+        metric: MetricOperatorOrder,
+        **kwargs,
+    ) -> Table: ...
