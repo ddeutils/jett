@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pyarrow import Schema, StructType
 from pyarrow.types import is_fixed_size_list, is_large_list, is_list, is_struct
 
@@ -5,11 +7,13 @@ from pyarrow.types import is_fixed_size_list, is_large_list, is_list, is_struct
 def schema2dict(
     schema: Schema, sorted_by_name: bool = False
 ) -> list[dict[str, str]]:
-    """Convert StructType object to dict that include keys, `name` and `dtype`.
+    """Convert Arrow Schema object to dict of field mapping that include keys,
+    `name` and `dtype`.
 
     Args:
-        schema:
-        sorted_by_name:
+        schema (Schema): A Arrow Schema object.
+        sorted_by_name (bool, default False): A flag that will sort returning
+            list of field mapping by name if it set be True.
     """
     rs: list[dict[str, str]] = [
         {"name": f.name, "dtype": str(f.dtype)} for f in schema
@@ -24,7 +28,7 @@ def extract_cols_without_array(schema: Schema) -> list[str]:
     type return only root array column name.
 
     Args:
-        schema (Schema):
+        schema (Schema): A Arrow Schema object.
 
     Returns:
         list[str]: A list of column name that extract by selectable without
@@ -50,6 +54,7 @@ def extract_cols_without_array(schema: Schema) -> list[str]:
 
 def extract_cols_selectable(
     schema: Schema | StructType,
+    *,
     prefix: str = "",
 ) -> list[str]:
     """
@@ -95,14 +100,15 @@ def extract_cols_selectable(
         ]
     """
     rs: list[str] = []
-
     for field in schema:
         field_name = prefix + field.name
         rs.append(field_name)
 
         field_type = field.type
         if is_struct(field_type):
-            rs.extend(extract_cols_selectable(field_type, f"{field_name}."))
+            rs.extend(
+                extract_cols_selectable(field_type, prefix=f"{field_name}.")
+            )
 
         # NOTE: Array types (list, large_list, fixed_size_list)
         elif (
@@ -114,7 +120,9 @@ def extract_cols_selectable(
             element_type = field_type.value_type
             if is_struct(element_type):
                 rs.extend(
-                    extract_cols_selectable(element_type, f"{field_name}[x].")
+                    extract_cols_selectable(
+                        element_type, prefix=f"{field_name}[x]."
+                    )
                 )
 
     return rs

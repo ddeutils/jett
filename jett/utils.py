@@ -37,12 +37,14 @@ def load_yaml(path: str | Path, add_info: bool = True) -> DictData:
     """Load YAML data. It will return empty data when the path does not exist.
 
     Args:
-        path: A YAML filepath.
-        add_info:
+        path (str | Path): A YAML filepath.
+        add_info (bool, default True): A flag that will add the information to
+            the YAML content data that was loaded before returning if it set be
+            True.
 
     Returns:
         DictData: return configuration data that extract from YAML file or
-        return empty dict object if it does not exist.
+            return empty dict object if it does not exist.
     """
     path: Path = Path(path)
     if path.exists():
@@ -60,7 +62,12 @@ def load_yaml(path: str | Path, add_info: bool = True) -> DictData:
 
 
 def write_yaml(path: str | Path, data: Any) -> None:
-    """Write YAML file with an input data."""
+    """Write YAML file with an input data.
+
+    Args:
+        path (str | Path): A YAML filepath.
+        data (Any): An any content data that want to write with YAML syntax.
+    """
     with open(path, mode="w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
@@ -75,7 +82,10 @@ def get_dt_now() -> datetime:
 
 
 def get_dt_latest() -> datetime:
-    return datetime(9999, 12, 31)
+    """Get the latest datetime object. This function will return the datetime
+    at "9999-12-31 00:00:00Z".
+    """
+    return datetime(9999, 12, 31, tzinfo=timezone.utc)
 
 
 def char_to_snake_case(name: str) -> str:
@@ -279,20 +289,23 @@ def handle_command(
             f"Permission denied to execute command: '{args}'."
         ) from None
     finally:
-        # This block ensures that resources are cleaned up, even if the
-        # generator is not fully consumed (e.g., the consumer breaks the loop).
+        # NOTE: This block ensures that resources are cleaned up, even if the
+        #   generator is not fully consumed (e.g., the consumer breaks the loop).
         if proc:
-            # If the process is still running (e.g., generator was closed early),
-            # terminate it to prevent orphaned processes.
+            # NOTE: If the process is still running (e.g., generator was closed early),
+            #   terminate it to prevent orphaned processes.
             if proc.poll() is None:
                 try:
                     proc.terminate()  # Ask nicely first
                     proc.wait(timeout=2)  # Give it a moment to die
                 except subprocess.TimeoutExpired:
-                    proc.kill()  # Forcefully kill if it doesn't terminate
-                    proc.wait()  # Reap the killed process
+                    # NOTE: Forcefully kill if it doesn't terminate
+                    proc.kill()
 
-            # Explicitly close the file handles to release OS resources.
+                    # NOTE: Reap the killed process
+                    proc.wait()
+
+            # NOTE: Explicitly close the file handles to release OS resources.
             if proc.stdout:
                 proc.stdout.close()
             if proc.stderr:
@@ -315,23 +328,35 @@ def sort_non_sensitive_str(value: list[str]) -> list[str]:
 
 
 def dt2str(
-    val: datetime,
+    dt: datetime,
+    *,
     sep: str = " ",
     timespec: str = "microseconds",
     add_utc_suffix: bool = False,
 ) -> str:
-    """Covert datetime object to str with format `%Y-%M-%d %H:%M:%S.%s`"""
-    rs: str = val.isoformat(sep=sep, timespec=timespec)
+    """Covert datetime object to str with format `%Y-%M-%d %H:%M:%S.%s`
+
+    Args:
+        dt (datetime): A datetime object.
+        sep (str, default " "): A seperator string.
+        timespec (str, default "microseconds"): A time spec.
+        add_utc_suffix (bool, default False): A flag that will add the UTC
+            timezone suffix, "Z", on the ISO datetime format before returning.
+
+    Returns:
+        str: A converted datetime string.
+    """
+    rs: str = dt.isoformat(sep=sep, timespec=timespec)
     return f"{rs}Z" if add_utc_suffix else rs
 
 
 def clean_string(text: str) -> str:
     """Remove indent, double whitespace, double newlines from string."""
-    text = dedent(text)
-    text = text.replace("  ", "")
-    text = text.split("\n")
-    text = list(filter(None, text))
-    text = "\n".join(text)
+    text: str = dedent(text)
+    text: str = text.replace("  ", "")
+    text: list[str] = text.split("\n")
+    text: list[str] = list(filter(None, text))
+    text: str = "\n".join(text)
     return text
 
 
@@ -341,14 +366,14 @@ def format_bytes_humanreadable(num_bytes: int) -> str:
         return "0 B"
 
     size_name: tuple[str, ...] = ("B", "KB", "MB", "GB", "TB", "PB")
-    i: int = int(math.floor(math.log(num_bytes, 1024)))
-    p: float = math.pow(1024, i)
+    i: int = int(math.floor(math.log(num_bytes, 1_024)))
+    p: float = math.pow(1_024, i)
     s = round(num_bytes / p, 2)
     return f"{s} {size_name[i]}"
 
 
 def truncate_str_with_byte_limit(
-    input_str: str, mode: str, max_bytes: int = 1048576
+    input_str: str, mode: str, max_bytes: int = 1_048_576
 ) -> str:
     """Truncate string with maximum size of string cannot greater than given
     maximum bytes support truncate from head or tail.
@@ -362,13 +387,13 @@ def truncate_str_with_byte_limit(
     if mode not in ["head", "tail"]:
         raise ValueError("mode must be head or tail")
 
-    encoded_string = input_str.encode("utf-8")
-    encoded_string = (
+    encoded_string: bytes = input_str.encode("utf-8")
+    encoded_string: bytes = (
         encoded_string[:max_bytes]
         if mode == "head"
         else encoded_string[-max_bytes:]
     )
-    truncated_string = encoded_string.decode("utf-8", "ignore")
+    truncated_string: str = encoded_string.decode("utf-8", "ignore")
     return truncated_string
 
 

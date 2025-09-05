@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pyarrow as pa
 import pytest
 from pyarrow import (
@@ -183,7 +185,7 @@ def test_extract_cols_selectable():
         pa.large_list(pa.string()),
         pa.list_(pa.int8(), 3),
         pa.struct([pa.field("f1", pa.int32()), pa.field("f2", pa.string())]),
-        pa.map_(pa.string(), pa.int32()),  # supported in 21.0.0
+        pa.map_(pa.string(), pa.int32()),
     ],
 )
 def test_extract_cols_selectable_arrow_primitives(arrow_type):
