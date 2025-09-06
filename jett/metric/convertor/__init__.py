@@ -1,13 +1,20 @@
+from __future__ import annotations
+
 import json
+from abc import ABC, abstractmethod
 from typing import Any, Literal, TypeVar
 
 from ...models import MetricData
 
 
-class BaseConvertor:
+class BaseConvertor(ABC):
+    """Base Convertor abstract class. Any convertor class should implement the
+    convert method that will use on the tool object after execute was done.
+    """
 
     def __init__(self, data: MetricData, custom_metric: dict[str, Any]):
-        """
+        """Main initialize.
+
         Args:
             data (MetricData): A metric data.
             custom_metric (dict[str, Any]): A custom metric data.
@@ -15,7 +22,15 @@ class BaseConvertor:
         self.data = data
         self.custom_metric = custom_metric
 
-    def convert(self) -> dict[str, Any]: ...
+    @abstractmethod
+    def convert(self) -> dict[str, Any]:
+        """Covert function that making result data that from the MetricData
+        model with specific use case depend on type of convert class.
+
+        Returns:
+            dict[str, Any]: A mapping metric data that was converted with the
+                convertor logic.
+        """
 
 
 class BasicConvertor(BaseConvertor):

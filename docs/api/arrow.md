@@ -1,6 +1,9 @@
 # Arrow
 
-## Abstract Arrow
+## Abstract Arrow Type
+
+Now, Arrow engine support returning types, `Table` and `Dataset`. The different
+between these types:
 
 | Feature           | `pyarrow.Table`                                | `pyarrow.dataset.Dataset`                                               |
 |-------------------|------------------------------------------------|-------------------------------------------------------------------------|

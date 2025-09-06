@@ -78,7 +78,8 @@ transforms:
       - op: expr
         sql: "customer_name AS name"
 
-# 3) 🎯 Sink result to target (multi-sink supported depends on each engine)
+# 3) 🎯 Sink result to target
+# - multi-sink supported depends on each engine
 sink:
   - type: local
     file_type: google_sheet
