@@ -5,7 +5,7 @@ from pathlib import Path
 from airflow.models import DAG
 from airflow.operators.empty import EmptyOperator
 
-from jett.plugins.airflow.operators import JettOperator
+from jett.plugins.airflow import JettOperator
 
 with DAG(
     dag_id="demo_jett",

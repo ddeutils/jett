@@ -47,7 +47,7 @@ RestAPIAuth = Annotated[
 class RestAPI(BaseMetric):
     """Metric RestAPI model."""
 
-    type: Literal["restapi"]
+    type: Literal["restapi"] = Field(description="A RestAPI metric type.")
     base_url: str
     path: str
     method: Literal["POST", "GET", "PUT", "PATCH"]
@@ -62,7 +62,7 @@ class RestAPI(BaseMetric):
         """Validate URL."""
         parse_result = parse.urlparse(f"{self.base_url}{self.path}")
         if (
-            parse_result.scheme not in ["http", "https"]
+            parse_result.scheme not in ("http", "https")
             or parse_result.netloc == ""
         ):
             raise ValueError("invalid base_url or path")
