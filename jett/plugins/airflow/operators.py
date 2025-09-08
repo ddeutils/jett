@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import json
 import logging
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from airflow.models.baseoperator import BaseOperator
-from airflow.utils.context import Context
 from yaml import safe_load
 
 from jett.tools import Tool
+
+if TYPE_CHECKING:
+    from airflow.utils.context import Context
 
 logger = logging.getLogger("jett")
 
